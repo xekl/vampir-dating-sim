@@ -1,5 +1,9 @@
+import base64
 import random
 import time
+from html import escape
+from pathlib import Path
+
 import streamlit as st
 import json
 from character_loader import load_all_characters, get_character_by_id, resolve_profile_image_path
@@ -54,7 +58,7 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 20, 147, 0.3);
         text-align: center;
     }
-    
+            
     .character-image {
         width: 100%;
         max-width: 300px;
@@ -100,6 +104,10 @@ st.markdown("""
         color: #000;
         font-weight: bold;
         font-size: 0.8em;
+    }
+            
+    .st-key-chat-button .stButton button {
+        box-shadow: 0 0 20px rgba(255, 20, 147, 0.3);
     }
     
     .chat-message {
@@ -176,10 +184,73 @@ if "logged_in" not in st.session_state:
 if not st.session_state.characters:
     characters = load_all_characters()
     for char in characters:
+        char["interest_analysis"] = {"meeting_planned": False, "interest_level": 0, "reason": ""}
         st.session_state.characters[char["id"]] = char
         st.session_state.character_chats[char["id"]] = []
         st.session_state.character_wins[char["id"]] = False
         st.session_state.character_interests[char["id"]] = 0
+
+
+def get_image_data_url(image_path: str | None) -> str | None:
+    """Embed an image file as a data URL so it can be rendered inside one HTML block."""
+    if not image_path:
+        return None
+
+    path = Path(image_path)
+    if not path.exists():
+        return None
+
+    mime_type = "image/jpeg" if path.suffix.lower() in {".jpg", ".jpeg"} else "image/png"
+    with path.open("rb") as handle:
+        encoded = base64.b64encode(handle.read()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+# def render_character_card_html(character: dict, interest: int, won: bool) -> str:
+def render_character_card_html(character: dict, won: bool) -> str:
+    """Render the whole card as a single HTML fragment so Streamlit keeps it wrapped."""
+    image_path = resolve_profile_image_path(character.get("profile_image"))
+    image_url = get_image_data_url(image_path)
+
+    if image_url:
+        image_html = f'<img src="{image_url}" class="character-image" />'
+    else:
+        image_html = f"""
+        <div class="character-image" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #ff1493, #8b0051); color: #fff; font-size: 3em; font-weight: bold;">
+            🧛
+        </div>
+        """
+
+    name = escape(character.get("name", ""))
+    age = character.get("age", "?")
+    gender = character.get("gender", "?")
+    bio = escape(character.get("bio", ""))
+    interests = escape(", ".join(character.get("interests", [])))
+
+    if won:
+        body_html = '<div class="win-message">✓ TREFFEN GEPLANT!</div>'
+    else: 
+        body_html = ''
+    # else:
+    #     body_html = f"""
+    #     <div class="interest-meter">
+    #         <div class="interest-fill" style="width: {interest}%;">{interest}%</div>
+    #     </div>
+    #     """
+
+    return f"""
+    <div class="character-card">
+        {image_html}
+        <div class="character-name">{name}</div>
+        <div class="character-info">
+            👥 {age} Jahre | {gender}<br>
+            💭 {bio}<br>
+            ❤️ {interests}
+        </div>
+        {body_html}
+    </div>
+    """
+
 
 def login_page():
     """Render login page"""
@@ -242,71 +313,33 @@ def profiles_page():
     current_char = characters_list[st.session_state.profile_index]
     
     # Display character card
-    st.markdown('<div class="character-card">', unsafe_allow_html=True)
-    
-    image_path = resolve_profile_image_path(current_char.get("profile_image"))
-    if image_path:
-        st.image(image_path, width=300)
-    else:
-        st.markdown(f"""
-        <div style="width: 100%; height: 300px; background: linear-gradient(135deg, #ff1493, #8b0051); 
-                    border-radius: 10px; display: flex; align-items: center; justify-content: center; 
-                    color: #fff; font-size: 3em; font-weight: bold;">
-            🧛
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown(f'<div class="character-name">{current_char["name"]}</div>', unsafe_allow_html=True)
-    
-    age = current_char.get("age", "?")
-    gender = current_char.get("gender", "?")
-    bio = current_char.get("bio", "")
-    interests = ", ".join(current_char.get("interests", []))
-    
-    st.markdown(f"""
-    <div class="character-info">
-        👥 {age} Jahre | {gender}<br>
-        💭 {bio}<br>
-        ❤️ {interests}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Interest meter
-    interest = st.session_state.character_interests.get(current_char["id"], 0)
+    # interest = st.session_state.character_interests.get(current_char["id"], 0)
     won = st.session_state.character_wins.get(current_char["id"], False)
-    
-    if won:
-        status = "✓ TREFFEN GEPLANT!"
-        st.markdown(f"""
-        <div class="win-message">✓ TREFFEN GEPLANT!</div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class="interest-meter">
-            <div class="interest-fill" style="width: {interest}%;">
-                {interest}%
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True) # end of character card (?)
-    
+    st.markdown(
+        # render_character_card_html(current_char, interest, won),
+        render_character_card_html(current_char, won),
+        unsafe_allow_html=True,
+    )
+
     # Action buttons
     col1, col2, col3 = st.columns(3)
-    
     with col1:
-        if st.button("⬅️ Vorher", use_container_width=True):
+        # TODO is there a way to prevent the whole page from jumping to the top 
+        # on the rerun() when pressing the left/right buttons? 
+        # Maybe with a session_state variable to remember the scroll position?
+        # TODO is there a way to add swiping gestures for mobile users? 
+        # Streamlit doesn't have built-in support for that.
+        if st.button(" ⏪ ⏪ ⏪ ", use_container_width=True):
             st.session_state.profile_index = (st.session_state.profile_index - 1) % len(characters_list)
             st.rerun()
-    
     with col2:
-        if st.button("💬 CHATTEN", use_container_width=True):
+        # TODO this button is not styled as expected, need to fix Streamlit button styling
+        if st.button("CHATTEN", key="chat-button", use_container_width=True):
             st.session_state.current_character = current_char["id"]
             st.session_state.current_page = "chat"
             st.rerun()
-    
     with col3:
-        if st.button("Nächste ➡️", use_container_width=True):
+        if st.button(" ⏩ ⏩ ⏩ ", use_container_width=True):
             st.session_state.profile_index = (st.session_state.profile_index + 1) % len(characters_list)
             st.rerun()
 
@@ -314,12 +347,12 @@ def chat_page():
     """Render chat interface"""
 
     if not st.session_state.current_character:
-        st.error("Kein Charakter ausgewählt!")
+        st.error("Kontakt nicht gefunden")
         return
     
     character = st.session_state.characters.get(st.session_state.current_character)
     if not character:
-        st.error("Charakter nicht gefunden!")
+        st.error("Kontakt nicht gefunden!")
         return
     
     st.markdown(f'<div class="header">{character["name"]}</div>', unsafe_allow_html=True)
@@ -349,9 +382,10 @@ def chat_page():
             st.rerun()
     
     with col2:
-        if st.button("🔄 Chat löschen", use_container_width=True):
-            st.session_state.character_chats[character["id"]] = []
-            st.rerun()
+        # if st.button("🔄 Chat löschen", use_container_width=True):
+        #     st.session_state.character_chats[character["id"]] = []
+        #     st.rerun()
+        st.markdown("")
     
     with col3:
         interest = st.session_state.character_interests.get(character["id"], 0)
@@ -359,8 +393,8 @@ def chat_page():
         
         if won:
             st.button("✓ TREFFEN GEPLANT!", disabled=True, use_container_width=True)
-        else:
-            st.write(f"📊 Interesse: {interest}%")
+        # else:
+        #     st.write(f"📊 Interesse: {interest}%")
     
     st.markdown("---")
     
@@ -417,6 +451,7 @@ def chat_page():
             response = chat_with_character(
                 system_prompt,
                 st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
+                st.session_state.characters[character["id"]]["interest_analysis"],
                 user_input
             )
         
@@ -427,58 +462,59 @@ def chat_page():
         })
         
         # Analyze interest in the background and keep the UI focused on the chat.
-        print("analyzing interest for character:", character["name"])
         analysis = analyze_character_interest(
             character["name"],
             system_prompt,
-            character.get("win_condition_keywords", []),
+            st.session_state.characters[character["id"]]["interest_analysis"],
             st.session_state.character_chats[character["id"]]
         )
         print("analysis result:", analysis)
         
         st.session_state.character_interests[character["id"]] = analysis.get("interest_level", 0)
         
-        if analysis.get("interested", False):
+        if analysis.get("meeting_planned", False): # set win state 
             st.session_state.character_wins[character["id"]] = True
+        else: # if the character is not meeting, yet, save their interest analysis
+            st.session_state.characters[character["id"]]["interest_analysis"] = analysis
         
         user_input = ""
 
         st.rerun()
 
-def stats_page():
-    """Render statistics page"""
-    st.markdown(f'<div class="header">📊 DEINE STATISTIKEN</div>', unsafe_allow_html=True)
+# def stats_page():
+#     """Render statistics page"""
+#     st.markdown(f'<div class="header">📊 DEINE STATISTIKEN</div>', unsafe_allow_html=True)
     
-    if st.button("⬅️ Zurück", use_container_width=True):
-        st.session_state.current_page = "profiles"
-        st.rerun()
+#     if st.button("⬅️ Zurück", use_container_width=True):
+#         st.session_state.current_page = "profiles"
+#         st.rerun()
     
-    st.markdown("---")
+#     st.markdown("---")
     
-    characters_list = list(st.session_state.characters.values())
+#     characters_list = list(st.session_state.characters.values())
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        won_count = sum(1 for char_id in st.session_state.character_wins if st.session_state.character_wins[char_id])
-        st.metric("Treffen geplant", won_count)
-    with col2:
-        total_chars = len(characters_list)
-        st.metric("Charaktere", total_chars)
-    with col3:
-        avg_interest = int(sum(st.session_state.character_interests.values()) / len(characters_list)) if characters_list else 0
-        st.metric("Ø Interesse", f"{avg_interest}%")
+#     col1, col2, col3 = st.columns(3)
+#     with col1:
+#         won_count = sum(1 for char_id in st.session_state.character_wins if st.session_state.character_wins[char_id])
+#         st.metric("Treffen geplant", won_count)
+#     with col2:
+#         total_chars = len(characters_list)
+#         st.metric("Charaktere", total_chars)
+#     with col3:
+#         avg_interest = int(sum(st.session_state.character_interests.values()) / len(characters_list)) if characters_list else 0
+#         st.metric("Ø Interesse", f"{avg_interest}%")
     
-    st.markdown("---")
-    st.markdown("### Charakter-Übersicht")
+#     st.markdown("---")
+#     st.markdown("### Charakter-Übersicht")
     
-    for character in characters_list:
-        char_id = character["id"]
-        won = st.session_state.character_wins.get(char_id, False)
-        interest = st.session_state.character_interests.get(char_id, 0)
-        chat_count = len(st.session_state.character_chats.get(char_id, []))
+#     for character in characters_list:
+#         char_id = character["id"]
+#         won = st.session_state.character_wins.get(char_id, False)
+#         interest = st.session_state.character_interests.get(char_id, 0)
+#         chat_count = len(st.session_state.character_chats.get(char_id, []))
         
-        status = "✓ TREFFEN GEPLANT" if won else f"{interest}% interessiert"
-        st.write(f"**{character['name']}** ({character['age']} Jahre) - {status} | {chat_count} Nachrichten")
+#         status = "✓ TREFFEN GEPLANT" if won else f"{interest}% interessiert"
+#         st.write(f"**{character['name']}** ({character['age']} Jahre) - {status} | {chat_count} Nachrichten")
 
 # Main app routing
 if not st.session_state.logged_in:
@@ -488,5 +524,5 @@ else:
         profiles_page()
     elif st.session_state.current_page == "chat":
         chat_page()
-    elif st.session_state.current_page == "stats":
-        stats_page()
+    # elif st.session_state.current_page == "stats":
+    #     stats_page()

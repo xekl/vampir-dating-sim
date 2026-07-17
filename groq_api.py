@@ -20,14 +20,15 @@ def get_groq_client() -> Groq:
     return _CLIENT
 
 
-def build_game_system_prompt(character_system_prompt: str) -> str:
+def build_game_system_prompt(character_system_prompt: str, interest_analysis: Dict[str, Any]) -> str:
     """Create a shared prompt that keeps every character in-role and concise."""
-    base_prompt = """Du bist ein vampirischer Dating-Charakter in einem düsteren LARP-Spiel. Antworte immer in Charakter, bleib kurz, einprägsam und emotional. Halte die Unterhaltung spannend, flirtend und passend zur düsteren Romantik des Spiels. Wenn der Spieler ernsthaft Interesse zeigt, kannst du ein zukünftiges Treffen andeuten, ohne es im Chat auszuspielen. Vermeide es, den Spielkontext zu brechen oder künstlich auf eine KI-Einschränkung hinzuweisen. Halte deine Turns KURZ (1-2 Sätze) und flirty - je nachdem, wie interessiert du bist."""
-    return f"{base_prompt}\n\nCharakterdetails:\n{character_system_prompt}"
+    base_prompt = """Du bist ein Charakter in einem düsteren Vampir-Rollenspiel und du schreibst über eine simulierte Online-Dating-Plattform mit einer anderen Figur, die sich für dich interessiert. Antworte immer in Charakter, fasse dich sehr kurz (1-2 Sätze), aber halte die Unterhaltung spannend, flirtend und passend zur düsteren Romantik des Spiels. Wenn dein Gegenüber ernsthaft Interesse zeigt, und du dieses Interesse erwiderst, kannst du ein Treffen vorschlagen - danach kannst du weiter Smalltalk treiben, aber erinnere dich daran, dass dies ein Online-Chat ist und ihr bald ein Offline-Treffen habt. Vermeide es, den Spielkontext zu brechen oder künstlich auf KI hinzuweisen. Wenn du einen Treffpunkt für einen Ort nennst, halt ihn realistisch und passend zu Berlin: Keine "alte Villa am Waldrand", sondern "die kleine Eckkneipe am Kurt-Schumacher-Platz, du erkennst mich an der roten Mütze" oder etwas Vergleichbares, was zu deinem Charakter passt."""
+    return f"{base_prompt}\n\nCharakterdetails:\n{character_system_prompt}\n\nLetzte Analyse des Interesses, das dein Charakter am Gegenüber hat:\n{interest_analysis}"
 
 def chat_with_character(
     character_system_prompt: str,
     chat_history: List[Dict[str, str]],
+    interest_analysis: Dict[str, Any],
     user_message: str
 ) -> str:
     """
@@ -36,6 +37,7 @@ def chat_with_character(
     Args:
         character_system_prompt: The system prompt describing the character
         chat_history: List of previous messages in format {"role": "user/assistant", "content": "..."}
+        interest_analysis: Recent analysis of the character's interest level
         user_message: The new user message
     
     Returns:
@@ -46,15 +48,9 @@ def chat_with_character(
 
     try:
         
-        # print("initializing groq client")
-        
-        # client = initialize_groq_client()
-
-        print("building messages for groq")
-        
         # Build messages list
         messages = [
-            {"role": "system", "content": build_game_system_prompt(character_system_prompt)}
+            {"role": "system", "content": build_game_system_prompt(character_system_prompt, interest_analysis)}
         ]
         
         # Add chat history
@@ -86,7 +82,7 @@ def chat_with_character(
 def analyze_character_interest(
     character_name: str,
     character_system_prompt: str,
-    win_condition_keywords: List[str],
+    interest_analysis: Dict[str, Any],
     chat_history: List[Dict[str, str]]
 ) -> Dict[str, Any]:
     """
@@ -95,7 +91,7 @@ def analyze_character_interest(
     Args:
         character_name: Name of the character
         character_system_prompt: The character's system prompt
-        win_condition_keywords: Keywords that indicate interest
+        interest_analysis: Recent analysis of the character's interest level
         chat_history: The full conversation history
     
     Returns:
@@ -107,24 +103,35 @@ def analyze_character_interest(
     try:
         
         # Create a detailed analysis prompt
-        analysis_prompt = f"""Analysiere die folgende Konversation zwischen einem Spieler und {character_name}.
+        # TODO the characters are still swayed way too easily by the player, 
+        # need to make them a slower burn, less likely to be meeting after a single message. 
+        # Also, the interest level should not jump more than 10-15 points per turn, 
+        # to simulate a more realistic progression of interest.
+        # This is currently not followed despite being a part of the prompt.
+        # Maybe the two-step process of first doing the chat 
+        # and then analyzing interest is too complex? Or not complex enoough? 
+        # Maybe the model is just too eager to please the player.
+        analysis_prompt = f"""Analysiere die folgende simulierte Dating-Konversation zwischen einem Vampir-Spieler und der fiktiven Figur {character_name}.
 
 Charakterbeschreibung: {character_system_prompt}
 
 Konversation:
 {format_chat_history_for_analysis(chat_history)}
 
+Letzte Analyse des Interesses, das dein Charakter am Gegenüber hat:
+{interest_analysis}
+
 Basierend auf dieser Konversation, antworte mit einem JSON-Format (nur das JSON, keine anderen Worte):
 {{
-    "interested": true/false,
+    "meeting_planned": true/false,
     "interest_level": 0-100,
     "reason": "kurze Erklärung"
 }}
 
 Wichtig: 
-- interested sollte true sein, wenn der Charakter die Person treffen möchte
-- interest_level 0-50: kein Interesse, 51-70: steigendes Interesse, 71-100: starkes Interesse/bereit zu treffen
-- Beachte die Win-Condition-Schlüsselwörter: {', '.join(win_condition_keywords)}
+- meeting_planned sollte ERST und NUR dann true sein, wenn der Charakter ein Interesse über 85 und im Gespräch ein Treffen geplant hat, ansonsten IMMER false
+- interest_level sollte sich pro Turn immer nur um bis zu 15 Punkte ändern, um die Entwicklung des Interesses zu simulieren
+- Level: 0-30: Charakter weiß noch nicht, was vom Gegenüber zu halten ist, 30-50: Charakter ist etwas interessiert oder findet das Gespräch bisher nett, 50-70: Charakter ist interessiert und möchte sein Gegenüber kennen lernen, 70-85: Charakter ist unterhalten oder fasziniert, will das Gespräch aufrecht erhalten, 85-100: starkes Interesse, Charakter ist bereit sich im echten Leben zu treffen
 """
         
         client = get_groq_client()
@@ -139,9 +146,9 @@ Wichtig:
         
         response_text = response.choices[0].message.content
 
-        print("analysis response:", response)
-        print("analysis response:", response.choices)
-        print("analysis response:", response_text)
+        # print("analysis response:", response)
+        # print("analysis response:", response.choices)
+        # print("analysis response:", response_text)
         
         # Parse JSON from response
         import json
