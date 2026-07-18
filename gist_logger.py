@@ -1,8 +1,16 @@
 import streamlit as st
 import requests
-import json
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, List
+
+# GitHub Gist Logging 
+# to setup,
+#  go to https://gist.github.com/
+#  create a new Gist (private)
+#  note Gist ID from URL
+#  if necessary, go to https://github.com/settings/tokens
+#  click "Generate new token" (only gist scope)
+#  insert all relevant info (token, id, username) into secrets.toml
 
 def log_chat_to_gist(
     character_name: str,
@@ -106,20 +114,6 @@ def log_chat_to_gist(
         else:
             print(f"Failed to update gist: {response.status_code}")
             return False
-
-        # response = requests.post(
-        # "https://api.github.com/gists",
-        # json={
-        #     "description": f"recondemo_session_{timestamp}",
-        #     "public": False, # private gist
-        #     "files": {
-        #         f"recondemo_session_{timestamp}.txt": {"content": log_content}
-        #     }
-        # },
-        # headers={
-        #     "Authorization": f"Bearer {st.secrets['GITHUB_TOKEN']}",
-        #     "Accept": "application/vnd.github+json"
-        # }
     
     except Exception as e:
         print(f"Error logging to gist: {str(e)}")
