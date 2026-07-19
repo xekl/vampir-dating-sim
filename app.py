@@ -174,6 +174,7 @@ if "logged_in" not in st.session_state:
     st.session_state.character_chats = {}
     st.session_state.character_wins = {}
     st.session_state.character_interests = {}
+    st.session_state.character_looking_for = {}
 
 # Load characters on startup
 if not st.session_state.characters:
@@ -184,6 +185,7 @@ if not st.session_state.characters:
         st.session_state.character_chats[char["id"]] = []
         st.session_state.character_wins[char["id"]] = False
         st.session_state.character_interests[char["id"]] = 0
+        st.session_state.character_looking_for[char["id"]] = 0
 
 
 def get_image_data_url(image_path: str | None) -> str | None:
@@ -220,21 +222,22 @@ def render_character_card_html(character: dict, won: bool) -> str:
     gender = character.get("gender", "?")
     bio = escape(character.get("bio", ""))
     interests = escape(", ".join(character.get("interests", [])))
+    looking_for = escape(", ".join(character.get("looking_for", [])))
 
     if won:
         body_html = '<div class="win-message">✓ TREFFEN GEPLANT!</div>'
     else:
         body_html = "" # we do not ever show interest to the user, it is an internal metric for the game logic only
 
-
     return f"""
     <div class="character-card">
         {image_html}
         <div class="character-name">{name}</div>
         <div class="character-info">
-            👥 {age} Jahre | {gender}<br>
-            💭 {bio}<br>
-            ❤️ {interests}
+            {age} Jahre | {gender}<br>
+            {bio}<br>
+            Interessen: {interests}<br>
+            Ich suche: {looking_for}
         </div>
         {body_html}
     </div>
@@ -360,12 +363,9 @@ def chat_page():
     
     
     with col3:
-        interest = st.session_state.character_interests.get(character["id"], 0)
-        won = st.session_state.character_wins.get(character["id"], False)
-        
+        won = st.session_state.character_wins.get(character["id"], False)        
         if won:
             st.button("✓ TREFFEN GEPLANT!", disabled=True, use_container_width=True)
-
     
     st.markdown("---")
     
@@ -373,7 +373,8 @@ def chat_page():
     st.markdown(f"""
     <div style="background: rgba(255, 20, 147, 0.1); padding: 10px; border-radius: 5px; text-align: center; color: #b0b0b0; font-size: 0.9em;">
         {character.get("bio", "")}<br>
-        ❤️ {", ".join(character.get("interests", []))}
+        Interessen: {", ".join(character.get("interests", []))}<br>
+        Ich suche: {", ".join(character.get("looking_for", []))}
     </div>
     """, unsafe_allow_html=True)
     
@@ -402,7 +403,6 @@ def chat_page():
     st.markdown("---")
     
     # Input area
-    # user_input = st.text_input("Deine Nachricht:", key=f"chat_{character['id']}")
     user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}")
     
     if user_input:
