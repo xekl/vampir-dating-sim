@@ -144,13 +144,15 @@ Antworte nur mit JSON:
                 "interest_level": interest_level,
                 "reason": str(parsed.get("reason", ""))[:160],
             }
+        else: 
+            interest_level = previous_level
     except Exception:
         pass
 
     return {
         "meeting_planned": False,
         "interest_level": interest_level,
-        "reason": "Deterministische Fallback-Analyse.",
+        "reason": "Fehler bei der Analyse, vorheriger Zustand beibehalten.",
     }
 
 
