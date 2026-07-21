@@ -16,9 +16,30 @@ if not api_key or api_key.startswith("gsk_dummy"):
     )
 groq_client = Groq(api_key=api_key)
 
+groq_chat_models = [
+    # see https://console.groq.com/docs/rate-limits
+    "groq/compound", # Default model for character chat
+    "llama-3.3-70b-versatile",
+    "meta-llama/llama-prompt-guard-2-86m",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.6-27b",
+    "meta-llama/llama-prompt-guard-2-22m",
+    "openai/gpt-oss-20b",
+    "llama-3.1-8b-instant"
+]
+groq_chat_model = groq_chat_models[0]
+
+groq_analysis_models = [
+    "llama-3.1-8b-instant",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.6-27b",
+]
+groq_analysis_model = groq_analysis_models[0]
+
 
 def chat_with_character(
     character_system_prompt: str,
+    username: str,
     chat_history: List[Dict[str, str]],
     interest_analysis: Dict[str, Any],
     user_message: str
@@ -28,6 +49,7 @@ def chat_with_character(
     
     Args:
         character_system_prompt: The system prompt describing the character
+        username: The username of the player
         chat_history: List of previous messages in format {"role": "user/assistant", "content": "..."}
         interest_analysis: Recent analysis of the character's interest level
         user_message: The new user message
@@ -44,7 +66,8 @@ def chat_with_character(
         char_system_prompt = prompt_library.CHARACTER_REPLY_PROMPT_TEMPLATE.format(
             base_prompt = prompt_library.CHARACTER_REPLY_PROMPT_BASE,
             character_system_prompt = character_system_prompt,
-            interest_analysis_json = json.dumps(interest_analysis, ensure_ascii=False),
+            username = username,
+            # interest_analysis_json = json.dumps(interest_analysis, ensure_ascii=False),
         )
         messages = [
             {"role": "system", "content": char_system_prompt}
@@ -60,8 +83,8 @@ def chat_with_character(
         
         # Call Groq API
         response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            # model="mixtral-8x7b-32768",
+            # model="llama-3.3-70b-versatile",
+            model=groq_chat_model,
             messages=messages,
             temperature=0.8,  # Slightly creative but consistent
             max_tokens=200
@@ -120,8 +143,7 @@ def analyze_character_interest(
     
     try:
         response = groq_client.chat.completions.create(
-            # model="llama-3.3-70b-versatile",
-            model="mixtral-8x7b-32768",
+            model=groq_analysis_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
             max_tokens=180,
