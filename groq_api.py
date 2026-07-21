@@ -1,10 +1,12 @@
 import json
-import re 
 import os
+import re
+from typing import Any, Dict, List
+
 import streamlit as st
 from groq import Groq
-from typing import List, Dict, Any
 
+import prompt_library
 
 groq_client = None
 api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
@@ -14,11 +16,6 @@ if not api_key or api_key.startswith("gsk_dummy"):
     )
 groq_client = Groq(api_key=api_key)
 
-
-def build_game_system_prompt(character_system_prompt: str, interest_analysis: Dict[str, Any]) -> str:
-    """Create a shared prompt that keeps every character in-role and concise."""
-    base_prompt = """Du bist ein Charakter in einem düsteren Vampir-Rollenspiel und du schreibst über eine simulierte Online-Dating-Plattform mit einer anderen Figur, die sich für dich interessiert. Antworte immer in Charakter, fasse dich sehr kurz (1-2 Sätze), aber halte die Unterhaltung spannend, flirtend und passend zur düsteren Romantik des Spiels. Sei zunächst vorsichtig und langsam, nicht sofort zu offen. Ein echtes Treffen soll erst nach mehreren Gesprächen oder einer klaren emotionalen/konkreten Einladung passieren. Vermeide es, den Spielkontext zu brechen oder künstlich auf KI hinzuweisen. Wenn du einen Treffpunkt für einen Ort nennst, halt ihn realistisch und passend zu Berlin: Keine "alte Villa am Waldrand", sondern "die kleine Eckkneipe am Kurt-Schumacher-Platz, du erkennst mich an der roten Mütze" oder etwas Vergleichbares, das zu deinem Charakter passt."""
-    return f"{base_prompt}\n\nCharakterdetails:\n{character_system_prompt}\n\nLetzte Interesse-Analyse:\n{json.dumps(interest_analysis, ensure_ascii=False)}"
 
 def chat_with_character(
     character_system_prompt: str,
@@ -43,11 +40,16 @@ def chat_with_character(
 
     try:
         
-        # Build messages list
+        # Build system prompt
+        char_system_prompt = prompt_library.CHARACTER_REPLY_PROMPT_TEMPLATE.format(
+            base_prompt = prompt_library.CHARACTER_REPLY_PROMPT_BASE,
+            character_system_prompt = character_system_prompt,
+            interest_analysis_json = json.dumps(interest_analysis, ensure_ascii=False),
+        )
         messages = [
-            {"role": "system", "content": build_game_system_prompt(character_system_prompt, interest_analysis)}
+            {"role": "system", "content": char_system_prompt}
         ]
-        
+
         # Add chat history
         messages.extend(chat_history)
         
@@ -100,26 +102,14 @@ def analyze_character_interest(
         }
 
     conversation_summary = format_chat_history_for_analysis(chat_history)
-    prompt = f"""Analysiere die folgende simulierte Dating-Konversation zwischen einem Vampir-Spieler und der fiktiven Figur {character_name}.
 
-Charakterbeschreibung: {character_system_prompt}
-
-Konversation:
-{conversation_summary}
-
-Vorheriger Zustand:
-{json.dumps(previous_state, ensure_ascii=False)}
-
-Ziele:
-- Ein Treffen soll nur dann geplant werden, wenn das Gespräch deutlich romantisch, persönlich und konkret ist und das Interesse bereits sehr hoch ist.
-- Das Interesse soll pro Runde nur langsam wachsen, maximal 10-15 Punkte.
-- Wenn nur Smalltalk oder flache Konversation stattfindet, bleibt das Interesse stabil oder steigt nur leicht.
-- Wenn der Spieler zu direkt ist oder nur Oberflächenverhalten zeigt, darf das Interesse nicht stark steigen.
-
-Antworte nur mit JSON:
-{{"meeting_planned": true/false, "interest_level": 0-100, "reason": "kurze Erklärung"}}
-"""
-
+    prompt = prompt_library.INTEREST_ANALYSIS_PROMPT_TEMPLATE.format(
+        character_name = character_name,
+        character_system_prompt = character_system_prompt,
+        conversation_summary = conversation_summary,
+        previous_state_json = json.dumps(previous_state, ensure_ascii=False),
+    )
+    
     try:
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -128,7 +118,10 @@ Antworte nur mit JSON:
             max_tokens=180,
         )
         response_text = response.choices[0].message.content
-        match = re.search(r"\{.*\}", response_text, re.S)
+
+        print("Interest analysis response:", response_text)
+
+        match = re.search(r"\{.*\}", response_text, re.S) # find JSON object in the response
         if match:
             parsed = json.loads(match.group(0))
             interest_level = int(parsed.get("interest_level", previous_level))
@@ -144,7 +137,7 @@ Antworte nur mit JSON:
                 "interest_level": interest_level,
                 "reason": str(parsed.get("reason", ""))[:160],
             }
-        else: 
+        else: # no JSON found, return previous state
             interest_level = previous_level
     except Exception:
         pass
