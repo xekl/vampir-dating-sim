@@ -60,8 +60,8 @@ def chat_with_character(
         
         # Call Groq API
         response = groq_client.chat.completions.create(
-            # model="mixtral-8x7b-32768",  # Free tier model
             model="llama-3.3-70b-versatile",
+            # model="mixtral-8x7b-32768",
             messages=messages,
             temperature=0.8,  # Slightly creative but consistent
             max_tokens=200
@@ -72,6 +72,14 @@ def chat_with_character(
         return response.choices[0].message.content
     
     except Exception as e:
+        # Catch Rate Limit error for workarounds 
+        rate_limit_error_model = str(e).split("Rate limit reached for model `")[1].split("`")[0] if "Rate limit reached for model" in str(e) else None
+        if rate_limit_error_model:
+            print("---- Rate limit reached for model", rate_limit_error_model)
+            # TODO handle model or groq api key switch 
+            # then recall this function with same parameters
+            # for now, return error
+            return f"Rate limit reached for model {rate_limit_error_model}."
         return f"Fehler bei der Verbindung: {str(e)}"
 
 
@@ -112,7 +120,8 @@ def analyze_character_interest(
     
     try:
         response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            # model="llama-3.3-70b-versatile",
+            model="mixtral-8x7b-32768",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
             max_tokens=180,
@@ -137,10 +146,20 @@ def analyze_character_interest(
                 "interest_level": interest_level,
                 "reason": str(parsed.get("reason", ""))[:160],
             }
+        
         else: # no JSON found, return previous state
             interest_level = previous_level
-    except Exception:
-        pass
+
+    except Exception as e:
+        # Catch Rate Limit error for workarounds 
+        rate_limit_error_model = str(e).split("Rate limit reached for model `")[1].split("`")[0] if "Rate limit reached for model" in str(e) else None
+        if rate_limit_error_model:
+            print("---- Rate limit reached for model", rate_limit_error_model)
+            # TODO handle model or groq api key switch 
+            # then recall this function with same parameters
+            # for now, return error
+            return f"Rate limit reached for model {rate_limit_error_model}."
+        return f"Fehler bei der Verbindung: {str(e)}"
 
     return {
         "meeting_planned": False,
