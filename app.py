@@ -416,11 +416,12 @@ def chat_page():
         })
         
         # Get character response with a short, realistic typing delay.
-        time.sleep(random.uniform(0.6, 1.4))
+        time.sleep(random.uniform(1.4, 2.6))
         with st.spinner("tippt..."):
             system_prompt = character.get("system_prompt", "")
             response = chat_with_character(
                 system_prompt,
+                st.session_state.username, 
                 st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
                 st.session_state.characters[character["id"]]["interest_analysis"],
                 user_input

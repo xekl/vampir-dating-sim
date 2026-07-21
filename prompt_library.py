@@ -15,9 +15,9 @@ CHARACTER_REPLY_PROMPT_TEMPLATE = """{base_prompt}
 Charakterdetails:
 {character_system_prompt}
 
-Letzte Interesse-Analyse:
-{interest_analysis_json}"""
-
+Du chattest mit einem Gegenüber namens {username}."""
+# Letzte Interesse-Analyse:
+# {interest_analysis_json}
 
 # Used by groq_api.analyze_character_interest() to judge pacing and meeting potential.
 # Purpose: decide whether the conversation is still slow, whether interest has risen,
