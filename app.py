@@ -377,7 +377,7 @@ def chat_page():
         Ich suche: {", ".join(character.get("looking_for", []))}
     </div>
     """, unsafe_allow_html=True)
-    
+
     st.markdown("---")
     
     # Chat history
@@ -421,10 +421,11 @@ def chat_page():
             system_prompt = character.get("system_prompt", "")
             response = chat_with_character(
                 system_prompt,
-                st.session_state.username, 
-                st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
-                st.session_state.characters[character["id"]]["interest_analysis"],
-                user_input
+                current_time=time.strftime("%a, %d %b %Y, %H:%M"),
+                username=st.session_state.username,
+                chat_history=st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
+                interest_analysis=st.session_state.characters[character["id"]]["interest_analysis"],
+                user_message=user_input
             )
         
         # Add character response
