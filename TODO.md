@@ -1,7 +1,8 @@
 
-- character portraits : ) 
+- dialog manager does not manage anything 
 
 - chars should be open about their kink almost from the start 
+BUT NOT THAT OPEN AND THAT EARLY MICHI
 
 - think about reducing token costs ...
 
