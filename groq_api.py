@@ -225,7 +225,7 @@ def manage_dialog(
 
         return {
             "meeting_planned": False,
-            "interest_level": interest_level,
+            "interest_level": previous_level,
             "reason": "Fehler bei der Analyse: " + {str(e)},
             "char_instructions": "",
         }
