@@ -49,15 +49,3 @@ def load_all_characters() -> List[Dict[str, Any]]:
             print(f"Error loading character {json_file}: {e}")
     
     return characters
-
-def get_character_by_id(character_id: str) -> Dict[str, Any] | None:
-    """Get a specific character by ID"""
-    characters = load_all_characters()
-    for char in characters:
-        if char.get("id") == character_id:
-            return char
-    return None
-
-def get_character_system_prompt(character: Dict[str, Any]) -> str:
-    """Get the system prompt for a character"""
-    return character.get("system_prompt", "")
