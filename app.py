@@ -6,7 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 from character_loader import load_all_characters, resolve_profile_image_path
-from groq_api import chat_with_character, analyze_character_interest
+from groq_api import chat_with_character, manage_dialog
 from gist_logger import log_chat_to_gist
 
 # Configure page
@@ -415,16 +415,34 @@ def chat_page():
             "content": user_input
         })
         
+        # Character system prompt
+        system_prompt = character.get("system_prompt", "")
+
+        # Manage dialog
+        management_result = manage_dialog(
+            character["name"],
+            system_prompt,
+            st.session_state.characters[character["id"]]["interest_analysis"],
+            st.session_state.character_chats[character["id"]]
+        )
+        print("dialog management result:", management_result)
+        # st.session_state.character_interests[character["id"]] = management_result.get("interest_level", 0)
+        
+        if management_result.get("meeting_planned", False): # set win state 
+            st.session_state.character_wins[character["id"]] = True
+        # else: # if the character is not meeting, yet, save their interest analysis
+        #     st.session_state.characters[character["id"]]["management_result"] = management_result
+        st.session_state.characters[character["id"]]["management_result"] = management_result
+        
         # Get character response with a short, realistic typing delay.
-        time.sleep(random.uniform(1.4, 2.6))
-        with st.spinner("tippt..."):
-            system_prompt = character.get("system_prompt", "")
+        time.sleep(random.uniform(1.7, 2.9))
+        with st.spinner("tippt ..."):
             response = chat_with_character(
                 system_prompt,
                 current_time=time.strftime("%a, %d %b %Y, %H:%M"),
                 username=st.session_state.username,
                 chat_history=st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
-                interest_analysis=st.session_state.characters[character["id"]]["interest_analysis"],
+                management_result=st.session_state.characters[character["id"]]["management_result"],
                 user_message=user_input
             )
         
@@ -434,21 +452,21 @@ def chat_page():
             "content": response
         })
         
-        # Analyze interest in the background and keep the UI focused on the chat.
-        analysis = analyze_character_interest(
-            character["name"],
-            system_prompt,
-            st.session_state.characters[character["id"]]["interest_analysis"],
-            st.session_state.character_chats[character["id"]]
-        )
-        print("analysis result:", analysis)
+        # # Analyze interest in the background and keep the UI focused on the chat.
+        # analysis = analyze_character_interest(
+        #     character["name"],
+        #     system_prompt,
+        #     st.session_state.characters[character["id"]]["interest_analysis"],
+        #     st.session_state.character_chats[character["id"]]
+        # )
+        # print("analysis result:", analysis)
         
-        st.session_state.character_interests[character["id"]] = analysis.get("interest_level", 0)
+        # st.session_state.character_interests[character["id"]] = analysis.get("interest_level", 0)
         
-        if analysis.get("meeting_planned", False): # set win state 
-            st.session_state.character_wins[character["id"]] = True
-        else: # if the character is not meeting, yet, save their interest analysis
-            st.session_state.characters[character["id"]]["interest_analysis"] = analysis
+        # if analysis.get("meeting_planned", False): # set win state 
+        #     st.session_state.character_wins[character["id"]] = True
+        # else: # if the character is not meeting, yet, save their interest analysis
+        #     st.session_state.characters[character["id"]]["interest_analysis"] = analysis
         
         user_input = ""
 

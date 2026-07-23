@@ -61,7 +61,7 @@ def chat_with_character(
     current_time: str,
     username: str,
     chat_history: List[Dict[str, str]],
-    interest_analysis: Dict[str, Any],
+    management_result: Dict[str, Any],
     user_message: str
 ) -> str:
     """
@@ -71,7 +71,7 @@ def chat_with_character(
         character_system_prompt: The system prompt describing the character
         username: The username of the player
         chat_history: List of previous messages in format {"role": "user/assistant", "content": "..."}
-        interest_analysis: Recent analysis of the character's interest level
+        management_result: Recent analysis of the dialog flow and character's interest level
         user_message: The new user message
     
     Returns:
@@ -84,10 +84,11 @@ def chat_with_character(
     try:
         
         # Build system prompt
-        char_system_prompt = prompt_library.CHARACTER_REPLY_PROMPT_TEMPLATE.format(
+        char_system_prompt = prompt_library.CHARACTER_REPLY_PROMPT.format(
             current_time = current_time,
             character_system_prompt = character_system_prompt,
             username = username,
+            next_turn_instructions = management_result.get("char_instructions")
             # interest_analysis_json = json.dumps(interest_analysis, ensure_ascii=False),
         )
         messages = [
@@ -121,7 +122,7 @@ def chat_with_character(
         if rate_limit_error_model:
             # Switch to the next model in the list and retry
             groq_chat_model = get_next_groq_chat_model()
-            return chat_with_character(character_system_prompt, username, chat_history, interest_analysis, user_message)
+            return chat_with_character(character_system_prompt, username, chat_history, management_result, user_message)
             # TODO handle model or groq api key switch 
             # then recall this function with same parameters
             # for now, return error
@@ -129,24 +130,24 @@ def chat_with_character(
         return f"Fehler bei der Verbindung: {str(e)}"
 
 
-def analyze_character_interest(
+def manage_dialog(
     character_name: str,
     character_system_prompt: str,
     previous_state: Dict[str, Any],
     chat_history: List[Dict[str, str]],
-) -> Dict[str, Any]:
-    """Derive a more believable interest progression from the conversation history."""
+    ) -> Dict[str, Any]:
 
     global groq_analysis_model
 
     previous_level = int(previous_state.get("interest_level", 0))
     previous_meeting = bool(previous_state.get("meeting_planned", False))
 
-    if not chat_history:
+    if not chat_history or len(chat_history) == 1:
         return {
             "meeting_planned": False,
             "interest_level": previous_level,
-            "reason": "Noch keine neue Nachricht.",
+            "reason": "Noch keine Nachricht.",
+            "char_instructions": "",
         }
 
     latest_turn = chat_history[-1]
@@ -156,11 +157,12 @@ def analyze_character_interest(
             "meeting_planned": previous_meeting,
             "interest_level": previous_level,
             "reason": "Leere Nachricht ignoriert.",
+            "char_instructions": "",
         }
 
     conversation_summary = format_chat_history_for_analysis(chat_history)
 
-    prompt = prompt_library.INTEREST_ANALYSIS_PROMPT_TEMPLATE.format(
+    prompt = prompt_library.DIALOG_MANAGEMENT_PROMPT.format(
         character_name = character_name,
         character_system_prompt = character_system_prompt,
         conversation_summary = conversation_summary,
@@ -169,12 +171,12 @@ def analyze_character_interest(
     
     try:
 
-        print("Analyzing interest with model:", groq_analysis_model)
+        print("Managing dialog with model:", groq_analysis_model)
 
         response = groq_client.chat.completions.create(
             model=groq_analysis_model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
+            # temperature=0.2,
             max_tokens=180,
         )
         response_text = response.choices[0].message.content
@@ -186,16 +188,18 @@ def analyze_character_interest(
             parsed = json.loads(match.group(0))
             interest_level = int(parsed.get("interest_level", previous_level))
             interest_level = min(100, max(0, interest_level))
-            if previous_meeting:
-                interest_level = max(interest_level, previous_level)
+            # if previous_meeting:
+            #     interest_level = max(interest_level, previous_level)
             delta = interest_level - previous_level
             if abs(delta) > 15:
                 interest_level = previous_level + max(-15, min(15, delta))
-            meeting_planned = bool(parsed.get("meeting_planned", False)) and interest_level >= 85 and len(chat_history) >= 4
+            meeting_planned = bool(parsed.get("meeting_planned", False)) # and interest_level >= 85 and len(chat_history) >= 4
+            char_instructions = str(parsed.get("char_instructions", ""))
             return {
                 "meeting_planned": meeting_planned,
                 "interest_level": interest_level,
                 "reason": str(parsed.get("reason", ""))[:160],
+                "char_instructions": char_instructions,
             }
         
         else: # no JSON found, return previous state
@@ -203,6 +207,7 @@ def analyze_character_interest(
             "meeting_planned": previous_meeting,
             "interest_level": previous_level,
             "reason": "Message contains no JSON, was: " + response_text,
+            "char_instructions": "",
         }
 
     except Exception as e:
@@ -211,7 +216,7 @@ def analyze_character_interest(
         if rate_limit_error_model:
             # Switch to the next model in the list and retry
             groq_analysis_model = get_next_groq_analysis_model()
-            return analyze_character_interest(character_name, character_system_prompt, previous_state, chat_history)
+            return manage_dialog(character_name, character_system_prompt, previous_state, chat_history)
             # TODO handle model or groq api key switch 
             # then recall this function with same parameters
             # for now, return error
@@ -222,7 +227,106 @@ def analyze_character_interest(
             "meeting_planned": False,
             "interest_level": interest_level,
             "reason": "Fehler bei der Analyse: " + {str(e)},
+            "char_instructions": "",
         }
+
+
+
+
+# def analyze_character_interest(
+#     character_name: str,
+#     character_system_prompt: str,
+#     previous_state: Dict[str, Any],
+#     chat_history: List[Dict[str, str]],
+# ) -> Dict[str, Any]:
+#     """Derive a more believable interest progression from the conversation history."""
+
+#     global groq_analysis_model
+
+#     previous_level = int(previous_state.get("interest_level", 0))
+#     previous_meeting = bool(previous_state.get("meeting_planned", False))
+
+#     if not chat_history:
+#         return {
+#             "meeting_planned": False,
+#             "interest_level": previous_level,
+#             "reason": "Noch keine neue Nachricht.",
+#         }
+
+#     latest_turn = chat_history[-1]
+#     latest_text = str(latest_turn.get("content", "")).strip()
+#     if not latest_text:
+#         return {
+#             "meeting_planned": previous_meeting,
+#             "interest_level": previous_level,
+#             "reason": "Leere Nachricht ignoriert.",
+#         }
+
+#     conversation_summary = format_chat_history_for_analysis(chat_history)
+
+#     prompt = prompt_library.INTEREST_ANALYSIS_PROMPT_TEMPLATE.format(
+#         character_name = character_name,
+#         character_system_prompt = character_system_prompt,
+#         conversation_summary = conversation_summary,
+#         previous_state_json = json.dumps(previous_state, ensure_ascii=False),
+#     )
+    
+#     try:
+
+#         print("Analyzing interest with model:", groq_analysis_model)
+
+#         response = groq_client.chat.completions.create(
+#             model=groq_analysis_model,
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.2,
+#             max_tokens=180,
+#         )
+#         response_text = response.choices[0].message.content
+
+#         print("Interest analysis response:", response, response_text)
+
+#         match = re.search(r"\{.*\}", response_text, re.S) # find JSON object in the response
+#         if match:
+#             parsed = json.loads(match.group(0))
+#             interest_level = int(parsed.get("interest_level", previous_level))
+#             interest_level = min(100, max(0, interest_level))
+#             if previous_meeting:
+#                 interest_level = max(interest_level, previous_level)
+#             delta = interest_level - previous_level
+#             if abs(delta) > 15:
+#                 interest_level = previous_level + max(-15, min(15, delta))
+#             meeting_planned = bool(parsed.get("meeting_planned", False)) and interest_level >= 85 and len(chat_history) >= 4
+#             return {
+#                 "meeting_planned": meeting_planned,
+#                 "interest_level": interest_level,
+#                 "reason": str(parsed.get("reason", ""))[:160],
+#             }
+        
+#         else: # no JSON found, return previous state
+#             return {
+#             "meeting_planned": previous_meeting,
+#             "interest_level": previous_level,
+#             "reason": "Message contains no JSON, was: " + response_text,
+#         }
+
+#     except Exception as e:
+#         # Catch Rate Limit error for workarounds 
+#         rate_limit_error_model = str(e).split("Rate limit reached for model `")[1].split("`")[0] if "Rate limit reached for model" in str(e) else None
+#         if rate_limit_error_model:
+#             # Switch to the next model in the list and retry
+#             groq_analysis_model = get_next_groq_analysis_model()
+#             return analyze_character_interest(character_name, character_system_prompt, previous_state, chat_history)
+#             # TODO handle model or groq api key switch 
+#             # then recall this function with same parameters
+#             # for now, return error
+#             # return f"Rate limit reached for model {rate_limit_error_model}."
+#         # return f"Fehler bei der Verbindung: {str(e)}"
+
+#         return {
+#             "meeting_planned": False,
+#             "interest_level": interest_level,
+#             "reason": "Fehler bei der Analyse: " + {str(e)},
+#         }
 
 
 def format_chat_history_for_analysis(chat_history: List[Dict[str, str]]) -> str:
