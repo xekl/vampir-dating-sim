@@ -16,10 +16,11 @@ Deine Aufgabe: Update den Spielzustand basierend auf der Persönlichkeit des Cha
 - Ab interest_level 30 kann über das Bluttrinken gesprochen werden.
 - Ab interest_level 70 ist es realistisch, dass der Charakter einem Vorschlag zu einem Treffen zustimmt oder selbst einen macht. 
 - Ziel des Charakters ist zu flirten und ein passendes Match zu finden. Wenn das Gegenüber allerdings nicht passt oder das Gespräch nicht gut läuft, ist das Ziel es abzuwimmeln und das Gespräch zu beenden. 
+- Setze user_blocked auf true, wenn der Charakter das Gespräch nicht mehr weiterführen will, etwa weil interest_level unter 0 sinken würde oder weil interest_level unter 10 ist und die letzte Nachricht abweisend, beleidigend oder sehr unpassend war. In diesem Fall ist user_blocked true und der Charakter wird das Gespräch abbrechen.
 - char_instructions sind 1-2 Sätze, wie der Charakter seinen nächsten Turn gestalten soll, um diese Ziele zu erreichen. 
 - Wenn im Gespräch vorkommt, dass Inhalte von Fangtastic automatisch geblockt wurden und interest_level davor mindestens 40 war, dann erhöhe sofort auf 80, um gegebenenfalls offline fortzusetzen.
 Antworte nur und direkt mit JSON, kein Reasoning, keine weitere Erklärungen. 
-{{"meeting_planned": true/false, "interest_level": 0-100, "reason": "kurze Erklärung", "char_instructions": "kurze Anweisungen für den Charakter, wie er/sie sich im nächsten Turn verhalten soll"}}
+{{"meeting_planned": true/false, "interest_level": 0-100, "user_blocked": true/false, "reason": "kurze Erklärung", "char_instructions": "kurze Anweisungen für den Charakter, wie er/sie sich im nächsten Turn verhalten soll"}}
 """
 
 # Full system prompt for chat replies 

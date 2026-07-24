@@ -91,11 +91,13 @@ def manage_dialog(
 
     previous_level = int(previous_state.get("interest_level", 0))
     previous_meeting = bool(previous_state.get("meeting_planned", False))
+    previous_blocked = bool(previous_state.get("user_blocked", False))
 
     if not chat_history or len(chat_history) < 2:
         return {
             "meeting_planned": False,
             "interest_level": previous_level,
+            "user_blocked": False,
             "reason": "Noch keine Nachricht.",
             "char_instructions": "",
         }
@@ -106,6 +108,7 @@ def manage_dialog(
         return {
             "meeting_planned": previous_meeting,
             "interest_level": previous_level,
+            "user_blocked": False,
             "reason": "Leere Nachricht ignoriert.",
             "char_instructions": "",
         }
@@ -166,10 +169,12 @@ def manage_dialog(
             if abs(delta) > 15:
                 interest_level = previous_level + max(-15, min(15, delta))
             meeting_planned = bool(parsed.get("meeting_planned", False)) # and interest_level >= 85 and len(chat_history) >= 4
+            user_blocked = bool(parsed.get("user_blocked", False)) 
             char_instructions = str(parsed.get("char_instructions", ""))
             return {
                 "meeting_planned": meeting_planned,
                 "interest_level": interest_level,
+                "user_blocked": user_blocked,
                 "reason": str(parsed.get("reason", ""))[:160],
                 "char_instructions": char_instructions,
             }
@@ -178,6 +183,7 @@ def manage_dialog(
             return {
             "meeting_planned": previous_meeting,
             "interest_level": previous_level,
+            "user_blocked": previous_blocked,
             "reason": "Message contains no JSON, was: " + response_text,
             "char_instructions": "",
         }

@@ -161,6 +161,18 @@ st.markdown("""
         margin: 20px 0;
         flex-wrap: wrap;
     }
+
+    .lose-message {
+    background: linear-gradient(135deg, #ff3b30, #b00020);
+    color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin: 20px 0;
+    box-shadow: 0 0 20px rgba(255, 59, 48, 0.45);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -173,6 +185,7 @@ if "logged_in" not in st.session_state:
     st.session_state.characters = {}
     st.session_state.character_chats = {}
     st.session_state.character_wins = {}
+    st.session_state.character_loses = {}
     st.session_state.character_interests = {}
     st.session_state.character_looking_for = {}
 
@@ -184,6 +197,7 @@ if not st.session_state.characters:
         st.session_state.characters[char["id"]] = char
         st.session_state.character_chats[char["id"]] = []
         st.session_state.character_wins[char["id"]] = False
+        st.session_state.character_loses[char["id"]] = False
         st.session_state.character_interests[char["id"]] = 0
         st.session_state.character_looking_for[char["id"]] = 0
 
@@ -203,7 +217,7 @@ def get_image_data_url(image_path: str | None) -> str | None:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def render_character_card_html(character: dict, won: bool) -> str:
+def render_character_card_html(character: dict, won: bool, lost: bool) -> str:
     """Render the whole card as a single HTML fragment so Streamlit keeps it wrapped."""
     image_path = resolve_profile_image_path(character.get("profile_image"))
     image_url = get_image_data_url(image_path)
@@ -226,6 +240,8 @@ def render_character_card_html(character: dict, won: bool) -> str:
 
     if won:
         body_html = '<div class="win-message">✓ TREFFEN GEPLANT!</div>'
+    elif lost:
+        body_html = f'<div class="lose-message">🚫 {escape(character.get("name", ""))} hat dich blockiert.</div>'
     else:
         body_html = "" # we do not ever show interest to the user, it is an internal metric for the game logic only
 
@@ -295,8 +311,9 @@ def profiles_page():
     
     # Display character card
     won = st.session_state.character_wins.get(current_char["id"], False)
+    lost = st.session_state.character_loses.get(current_char["id"], False)
     st.markdown(
-        render_character_card_html(current_char, won),
+        render_character_card_html(current_char, won, lost),
         unsafe_allow_html=True,
     )
 
@@ -361,11 +378,14 @@ def chat_page():
             st.session_state.current_page = "profiles"
             st.rerun()
     
-    
+    # state info 
     with col3:
-        won = st.session_state.character_wins.get(character["id"], False)        
+        won = st.session_state.character_wins.get(character["id"], False)    
+        blocked = st.session_state.character_loses.get(character["id"], False)    
         if won:
             st.button("✓ TREFFEN GEPLANT!", disabled=True, use_container_width=True)
+        if blocked:
+            st.button("🚫 Geblockt", disabled=True, use_container_width=True)
     
     st.markdown("---")
     
@@ -403,9 +423,12 @@ def chat_page():
     # st.markdown("---")
     
     # Input area
-    user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}")
-    
-    if user_input:
+    if blocked: 
+        user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}", disabled=blocked)
+    else: 
+        user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}")
+
+    if user_input and not blocked:
 
         print("sent input:" + user_input)
         print()
@@ -434,11 +457,8 @@ def chat_page():
             st.session_state.characters[character["id"]]["interest_analysis"],
             st.session_state.character_chats[character["id"]]
         )
-        
-        if management_result.get("meeting_planned", False): # set win state 
-            st.session_state.character_wins[character["id"]] = True
         st.session_state.characters[character["id"]]["management_result"] = management_result
-        
+
         # Get character response with a short, realistic typing delay.
         time.sleep(random.uniform(0.7, 1.9)) # TODO adjust
         with st.spinner("tippt ..."):
@@ -457,9 +477,21 @@ def chat_page():
             "role": "assistant",
             "content": response
         })
-        
-        user_input = ""
 
+        # Set win or lose condition
+        st.session_state.character_wins[character["id"]] = bool( 
+            management_result.get("meeting_planned", False)
+        )
+        st.session_state.character_loses[character["id"]] = bool(
+            management_result.get("user_blocked", False)
+        )
+        if st.session_state.character_loses[character["id"]]:
+            st.session_state.character_chats[character["id"]].append({
+                "role": "assistant",
+                "content": f"{character['name']} hat dich blockiert."
+            })
+
+        # and rerun 
         st.rerun()
 
 
