@@ -24,7 +24,8 @@ analysis_model_index = -1
 def format_chat_history_for_analysis(chat_history: List[Dict[str, str]]) -> str:
     """Format chat history as readable text"""
     formatted = []
-    for msg in chat_history:
+    message_cap = 7 # max messages to include
+    for msg in chat_history[-message_cap:]:
         role = "Spieler" if msg.get("role") == "user" else "Charakter"
         content = msg.get("content", "")
         formatted.append(f"{role}: {content}")
