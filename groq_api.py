@@ -193,7 +193,7 @@ def manage_dialog(
             # return manage_dialog(character_name, character_strategy, previous_state, chat_history)
             
             # Switch to the next API key and retry with a new client 
-            print("rate limit readched for model, switching to API key", api_key_index)
+            print("rate limit readched for model, switching to API key", api_key_index+1)
             print()
             groq_client = get_next_groq_client()
             return manage_dialog(character_name, character_strategy, previous_state, chat_history)
@@ -293,7 +293,23 @@ def chat_with_character(
 
         print("chat response:", response)
         print()
+
+        # refusal filter: if model refuses, overwrite answer with fake Fangtastic blocker
+        check_refusal_messages = [
+            {"role": "user", "content": prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn = response)}
+        ]
+        is_refusal = groq_client.chat.completions.create(
+                model="groq/compound", # you can do this, compound!
+                messages=check_refusal_messages,
+                temperature=1,
+                max_tokens=50,
+            )
+        print("refusal check response:", is_refusal)
+        print()
+        if is_refusal.choices[0].message.content.lower().startswith("contentrefusal") or is_refusal.choices[0].message.content.lower().endswith("contentrefusal"):
+            return "Dieser Inhalt wurde von Fangtastic automatisch geblockt. Bitte halten Sie die Konversation zivilisiert."
         
+        # final response if no refusal
         return response.choices[0].message.content
     
     except Exception as e:
@@ -306,7 +322,7 @@ def chat_with_character(
             # return chat_with_character(character_description, current_time, username, chat_history, management_result, user_message)
             
             # Switch to the next API key and retry with a new client 
-            print("rate limit readched for model, switching to API key", api_key_index)
+            print("rate limit readched for model, switching to API key", api_key_index+1)
             print()
             groq_client = get_next_groq_client()
             return chat_with_character(character_description, current_time, username, chat_history, management_result, user_message)
