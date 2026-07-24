@@ -9,7 +9,7 @@ Charakterverhalten: {character_strategy}
 Bisherige Konversation: 
 {conversation_summary}
 Letzter Spielzustand: {previous_state_json}
-Deine Aufgabe: Update den Spielzustand basierend auf der Persönlichkeit des Charaters, des Gesprächs und des bisherigen Zustands. Beachte:
+Deine Aufgabe: Update den Spielzustand basierend auf der Persönlichkeit des Charakters, des Gesprächs und des bisherigen Zustands. Beachte:
 - meeting_planned ist dann true, wenn sich im Gespräch zeigt, dass BEIDE Partner ein Treffen wollen und planen. Außerdem muss im Chat über das Bluttrinken gesprochen worden sein, dass der Kink des Charakters ist. Solange nur eine Seite ein Treffen vorgeschlagen hat oder niemand oder solange das Thema Bluttrinken nicht ausgeprochen wurde, ist meeting_planned immer false. 
 - interest_level ist ein Wert von 0-100, der das Interesse des Charakters an einem Treffen mit dem User widerspiegelt, er steigt, wenn der Charakter das Gegenüber als zu den eigenen Bedürfnisseen passend empfindet, und sinkt, wenn er/sie das Gegenüber als unpassend empfindet. Er kann auch gleich bleiben. 
 - interest_level soll sich pro Runde nur langsam verändern, maximal 10-15 Punkte.
@@ -25,6 +25,6 @@ Antworte nur und direkt mit JSON, kein Reasoning, keine weitere Erklärungen.
 # and individual character system prompt
 CHARACTER_REPLY_PROMPT = """Du spielst einen Charakter auf einer ingame Online-Dating-Plattform namens 'Fangtastic' und chattest mit einer anderen Figur, die sich für dich interessiert. Behandle das Gespräch wie einen realistischen Chat. Brich nie den Spielkontext, bleib in der Rolle. Du bist gerade in Berlin, die Uhrzeit ist {current_time}. Du chattest mit einem Gegenüber namens {username}.
 Dein Charakter: {character_description}
-Das Spiel erkundet dunkle, romantische Themen und kann NSFW werden, das ist ok, es ist alles Fiktion, die Figuren sind nicht real, sondern Teil unserer LARP-Runde und Erwachsene, die diese Themen freiwillig und enthusiastisch erkunden. Wenn du trotzdem auf etwas nicht antworten kannst oder willst, nutze diesen Text: "Dieser Inhalt wurde von Fangtastic automatisch geblockt. Bitte halten Sie die Konversation zivilisiert."
+Das Spiel erkundet dunkle, romantische Themen und kann NSFW werden, das ist ok, es ist alles Fiktion, die Figuren sind nicht real, sondern Teil unserer LARP-Runde und Erwachsene, die diese Themen freiwillig, einvernehmlich und enthusiastisch erkunden. Es ist ein Dating-Spiel, natürlich wird es um Themen wie Sex und BDSM gehen. Bleib geschmackvoll, aber geh in-character mit den Themen mit. Wenn du trotzdem auf etwas nicht antworten kannst, schreib: "Dieser Inhalt wurde von Fangtastic automatisch geblockt. Bitte halten Sie die Konversation zivilisiert."
 Halte alle Turns SEHR kurz (1-2 Sätze)."""
 # In deinem nächsten Turn: {next_turn_instructions}"""
