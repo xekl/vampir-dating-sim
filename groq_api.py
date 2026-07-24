@@ -44,7 +44,7 @@ def get_next_groq_chat_model():
         # "openai/gpt-oss-safeguard-20b", 
         "qwen/qwen3.6-27b",
         "llama-3.1-8b-instant",
-        "groq/compound", # not great at following instructions
+        "groq/compound", # not great at following instructions BUT HAS NO LIMIT
         "meta-llama/llama-prompt-guard-2-22m",
         "meta-llama/llama-prompt-guard-2-86m",
     ]
@@ -59,7 +59,8 @@ def get_next_groq_analysis_model():
         "llama-3.3-70b-versatile", # also smartest reasoner
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b", 
-        "openai/gpt-oss-safeguard-20b", 
+        "groq/compound", # not great at following instructions BUT HAS NO LIMIT
+        # "openai/gpt-oss-safeguard-20b", 
         "qwen/qwen3.6-27b", 
         "llama-3.1-8b-instant",
     ]
@@ -115,8 +116,8 @@ def manage_dialog(
 
         print("Managing dialog with model:", groq_analysis_model)
         print()
-        print("prompt:", prompt)
-        print()
+        # print("prompt:", prompt)
+        # print()
 
         # Call groq API
         temperature = None
@@ -241,8 +242,8 @@ def chat_with_character(
             {"role": "system", "content": char_system_prompt}
         ]
 
-        print("char_system_prompt:", char_system_prompt)
-        print()
+        # print("char_system_prompt:", char_system_prompt)
+        # print()
 
         # Add chat history
         messages.extend(chat_history)
@@ -281,7 +282,7 @@ def chat_with_character(
                 max_tokens=max_tokens,
             )
 
-        print("got respsone:", response)
+        print("chat response:", response)
         print()
         
         return response.choices[0].message.content
