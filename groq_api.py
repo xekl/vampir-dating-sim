@@ -39,8 +39,8 @@ def get_next_groq_chat_model():
         # see https://console.groq.com/docs/rate-limits
         "llama-3.3-70b-versatile", # smartest chatter so far
         # "openai/gpt-oss-120b", # refuses to arrange meetings
-        "openai/gpt-oss-20b",
-        "openai/gpt-oss-safeguard-20b", 
+        # "openai/gpt-oss-20b",
+        # "openai/gpt-oss-safeguard-20b", 
         "qwen/qwen3.6-27b",
         "llama-3.1-8b-instant",
         "groq/compound", # not great at following instructions
