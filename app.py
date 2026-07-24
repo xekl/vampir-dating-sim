@@ -400,7 +400,7 @@ def chat_page():
                 </div>
                 ''', unsafe_allow_html=True)
     
-    st.markdown("---")
+    # st.markdown("---")
     
     # Input area
     user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}")
@@ -408,6 +408,14 @@ def chat_page():
     if user_input:
 
         print("sent input:" + user_input)
+        print()
+
+        # Write message 
+        st.markdown(f'''
+        <div class="chat-message chat-user">
+            <strong>👤 Du:</strong> {user_input}
+        </div>
+        ''', unsafe_allow_html=True)
 
         # Add user message
         st.session_state.character_chats[character["id"]].append({
@@ -416,29 +424,27 @@ def chat_page():
         })
         
         # Character system prompt
-        system_prompt = character.get("system_prompt", "")
+        character_description = character.get("character_description", "")
+        character_strategy = character.get("character_strategy", "")
 
         # Manage dialog
         management_result = manage_dialog(
             character["name"],
-            system_prompt,
+            character_strategy,
             st.session_state.characters[character["id"]]["interest_analysis"],
             st.session_state.character_chats[character["id"]]
         )
-        print("dialog management result:", management_result)
-        # st.session_state.character_interests[character["id"]] = management_result.get("interest_level", 0)
         
         if management_result.get("meeting_planned", False): # set win state 
             st.session_state.character_wins[character["id"]] = True
-        # else: # if the character is not meeting, yet, save their interest analysis
-        #     st.session_state.characters[character["id"]]["management_result"] = management_result
         st.session_state.characters[character["id"]]["management_result"] = management_result
         
         # Get character response with a short, realistic typing delay.
-        time.sleep(random.uniform(1.7, 2.9))
+        time.sleep(random.uniform(0.7, 1.9)) # TODO adjust
         with st.spinner("tippt ..."):
+            time.sleep(random.uniform(1.7, 2.9)) # TODO adjust
             response = chat_with_character(
-                system_prompt,
+                character_description,
                 current_time=time.strftime("%a, %d %b %Y, %H:%M"),
                 username=st.session_state.username,
                 chat_history=st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
@@ -451,22 +457,6 @@ def chat_page():
             "role": "assistant",
             "content": response
         })
-        
-        # # Analyze interest in the background and keep the UI focused on the chat.
-        # analysis = analyze_character_interest(
-        #     character["name"],
-        #     system_prompt,
-        #     st.session_state.characters[character["id"]]["interest_analysis"],
-        #     st.session_state.character_chats[character["id"]]
-        # )
-        # print("analysis result:", analysis)
-        
-        # st.session_state.character_interests[character["id"]] = analysis.get("interest_level", 0)
-        
-        # if analysis.get("meeting_planned", False): # set win state 
-        #     st.session_state.character_wins[character["id"]] = True
-        # else: # if the character is not meeting, yet, save their interest analysis
-        #     st.session_state.characters[character["id"]]["interest_analysis"] = analysis
         
         user_input = ""
 
