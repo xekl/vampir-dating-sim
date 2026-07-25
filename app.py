@@ -460,9 +460,9 @@ def chat_page():
         st.session_state.characters[character["id"]]["management_result"] = management_result
 
         # Get character response with a short, realistic typing delay.
-        time.sleep(random.uniform(0.7, 1.9)) # TODO adjust
+        time.sleep(random.uniform(5, 90)) # second wait before char starts typing
         with st.spinner("tippt ..."):
-            time.sleep(random.uniform(1.7, 2.9)) # TODO adjust
+            time.sleep(random.uniform(4, 23)) # second wait after char starts typing
             response = chat_with_character(
                 character_description,
                 current_time=time.strftime("%a, %d %b %Y, %H:%M"),
