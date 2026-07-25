@@ -314,7 +314,7 @@ def chat_with_character(
         print("refusal check response:", is_refusal)
         print()
         if is_refusal.choices[0].message.content.lower().startswith("contentrefusal") or is_refusal.choices[0].message.content.lower().endswith("contentrefusal"):
-            return "Dieser Inhalt wurde von Fangtastic automatisch geblockt. Bitte halten Sie die Konversation zivilisiert."
+            return "(Dieser Inhalt wurde gemäß den AGB von Fangtastic automatisch zensiert.)"
         
         # final response if no refusal
         return response.choices[0].message.content
