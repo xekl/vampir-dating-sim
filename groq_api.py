@@ -10,30 +10,23 @@ import prompt_library
 
 
 api_key_index = -1
+last_api_key_reached = 0
 chat_model_index = -1
 analysis_model_index = -1 
-
-
-def format_chat_history_for_analysis(chat_history: List[Dict[str, str]]) -> str:
-    """Format chat history as readable text"""
-    formatted = []
-    message_cap = 7 # max messages to include
-    for msg in chat_history[-message_cap:]:
-        role = "Spieler" if msg.get("role") == "user" else "Charakter"
-        content = msg.get("content", "")
-        formatted.append(f"{role}: {content}")
-    return "\n".join(formatted)
-
 
 
 def get_next_groq_client():
 
     global api_key_index
+    global last_api_key_reached
 
     api_keys = [st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", "")), 
                 st.secrets.get("GROQ_API_KEY_2", os.getenv("GROQ_API_KEY_2", "")), 
                 st.secrets.get("GROQ_API_KEY_3", os.getenv("GROQ_API_KEY_3", ""))]
-
+    
+    if api_key_index + 1 == len(api_keys):
+        last_api_key_reached += 1
+    
     api_key_index = (api_key_index + 1) % len(api_keys)
     return Groq(api_key=api_keys[api_key_index]) 
 
@@ -50,8 +43,6 @@ def get_next_groq_chat_model():
         "qwen/qwen3.6-27b",
         "llama-3.1-8b-instant",
         "groq/compound", # not great at following instructions BUT HAS NO LIMIT
-        "meta-llama/llama-prompt-guard-2-22m",
-        "meta-llama/llama-prompt-guard-2-86m",
     ]
     chat_model_index = (chat_model_index + 1) % len(groq_chat_models)
     return groq_chat_models[chat_model_index]
@@ -61,13 +52,13 @@ def get_next_groq_analysis_model():
     global analysis_model_index
 
     groq_analysis_models = [
-        "llama-3.3-70b-versatile", # also smartest reasoner
+        # "llama-3.3-70b-versatile", # also smartest reasoner
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b", 
-        "groq/compound", # not great at following instructions BUT HAS NO LIMIT
         # "openai/gpt-oss-safeguard-20b", 
         "qwen/qwen3.6-27b", 
         "llama-3.1-8b-instant",
+        "groq/compound", # not great at following instructions BUT HAS NO LIMIT
     ]
 
     analysis_model_index = (analysis_model_index + 1) % len(groq_analysis_models)
@@ -79,6 +70,17 @@ groq_chat_model = get_next_groq_chat_model()
 groq_analysis_model = get_next_groq_analysis_model()
 
 
+def format_chat_history_for_analysis(chat_history: List[Dict[str, str]]) -> str:
+    """Format chat history as readable text"""
+    formatted = []
+    message_cap = 7 # max messages to include
+    for msg in chat_history[-message_cap:]:
+        role = "Spieler" if msg.get("role") == "user" else "Charakter"
+        content = msg.get("content", "")
+        formatted.append(f"{role}: {content}")
+    return "\n".join(formatted)
+
+
 def manage_dialog(
     character_name: str,
     character_strategy: str,
@@ -88,6 +90,7 @@ def manage_dialog(
 
     global groq_client
     global groq_analysis_model
+    global last_api_key_reached
 
     previous_level = int(previous_state.get("interest_level", 0))
     previous_meeting = bool(previous_state.get("meeting_planned", False))
@@ -194,14 +197,16 @@ def manage_dialog(
         rate_limit_error_model = str(e).split("Rate limit reached for model `")[1].split("`")[0] if "Rate limit reached for model" in str(e) else None
         if rate_limit_error_model:
 
-            # Switch to the next model in the list and retry
-            # groq_analysis_model = get_next_groq_analysis_model()
-            # return manage_dialog(character_name, character_strategy, previous_state, chat_history)
-            
             # Switch to the next API key and retry with a new client 
-            print("rate limit readched for model, switching to API key", api_key_index+1)
+            print("rate limit reached for model, switching to API key", api_key_index+1)
             print()
             groq_client = get_next_groq_client()
+
+            # But if you are just recursing through the keys now, also switch model 
+            if last_api_key_reached > 3: 
+                groq_analysis_model = get_next_groq_analysis_model()
+                last_api_key_reached = 0 # and reset key recursion check
+
             return manage_dialog(character_name, character_strategy, previous_state, chat_history)
 
         print("error: ", e)
@@ -240,6 +245,7 @@ def chat_with_character(
 
     global groq_client
     global groq_chat_model
+    global last_api_key_reached
 
     print("entering chat_with_character with model:", groq_chat_model)
     print()
@@ -273,7 +279,7 @@ def chat_with_character(
         
         # Call Groq API
         temperature = 0.8
-        max_tokens = 200
+        max_tokens = 250
         if "gpt-oss" in groq_chat_model:
             response = groq_client.chat.completions.create(
                 model=groq_chat_model,
@@ -317,21 +323,26 @@ def chat_with_character(
             return "(Dieser Inhalt wurde gemäß den AGB von Fangtastic automatisch zensiert.)"
         
         # final response if no refusal
-        return response.choices[0].message.content
+        if "compound" in groq_chat_model: 
+            return response.choices[0].message.reasoning # hack for compound model: reasoning answer usually better than actual answer ...
+        else: 
+            return response.choices[0].message.content
     
     except Exception as e:
         # Catch Rate Limit error for workarounds 
         rate_limit_error_model = str(e).split("Rate limit reached for model `")[1].split("`")[0] if "Rate limit reached for model" in str(e) else None
         if rate_limit_error_model:
 
-            # Switch to the next model in the list and retry
-            # groq_chat_model = get_next_groq_chat_model()
-            # return chat_with_character(character_description, current_time, username, chat_history, management_result, user_message)
-            
             # Switch to the next API key and retry with a new client 
-            print("rate limit readched for model, switching to API key", api_key_index+1)
+            print("rate limit reached for model, switching to API key", api_key_index+1)
             print()
             groq_client = get_next_groq_client()
+
+            # But if you are just recursing through the keys now, also switch model 
+            if last_api_key_reached > 3: 
+                groq_chat_model = get_next_groq_chat_model()
+                last_api_key_reached = 0 # and reset key recursion check
+
             return chat_with_character(character_description, current_time, username, chat_history, management_result, user_message)
 
         return f"Fehler bei der Verbindung: {str(e)}"
