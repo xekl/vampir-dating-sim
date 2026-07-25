@@ -60,7 +60,7 @@ def get_next_groq_analysis_model():
     global analysis_model_index
 
     groq_analysis_models = [
-        # "llama-3.3-70b-versatile", # also smartest reasoner
+        "llama-3.3-70b-versatile", # also smartest reasoner
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b", 
         # "openai/gpt-oss-safeguard-20b", 
