@@ -278,7 +278,7 @@ def login_page():
         
         if st.button("🌙 EINLOGGEN", use_container_width=True):
             # Hardcoded credentials
-            if username == "fanggirl" and password == "blut123":
+            if username == "fanggirl" and password == "blut1234":
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.session_state.current_page = "profiles"
