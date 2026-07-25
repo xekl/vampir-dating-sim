@@ -109,7 +109,7 @@ def manage_dialog(
             "meeting_planned": previous_meeting,
             "interest_level": previous_level,
             "user_blocked": False,
-            "reason": "Leere Nachricht ignoriert.",
+            "reason": "",
             "char_instructions": "",
         }
 
@@ -184,7 +184,7 @@ def manage_dialog(
             "meeting_planned": previous_meeting,
             "interest_level": previous_level,
             "user_blocked": previous_blocked,
-            "reason": "Message contains no JSON, was: " + response_text,
+            "reason": "Kein JSON, nur: " + response_text,
             "char_instructions": "",
         }
 
@@ -209,7 +209,8 @@ def manage_dialog(
         return {
             "meeting_planned": False,
             "interest_level": previous_level,
-            "reason": "Fehler bei der Analyse: " + {str(e)},
+            "user_blocked": previous_blocked,
+            "reason": "...",
             "char_instructions": "",
         }
 
