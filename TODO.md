@@ -1,6 +1,4 @@
 
-
-- API keys
 - Wartezeiten aif Turns länger
 
 

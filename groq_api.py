@@ -22,7 +22,15 @@ def get_next_groq_client():
 
     api_keys = [st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", "")), 
                 st.secrets.get("GROQ_API_KEY_2", os.getenv("GROQ_API_KEY_2", "")), 
-                st.secrets.get("GROQ_API_KEY_3", os.getenv("GROQ_API_KEY_3", ""))]
+                st.secrets.get("GROQ_API_KEY_3", os.getenv("GROQ_API_KEY_3", "")),
+                st.secrets.get("GROQ_API_KEY_4", os.getenv("GROQ_API_KEY_4", "")),
+                st.secrets.get("GROQ_API_KEY_5", os.getenv("GROQ_API_KEY_5", "")),
+                st.secrets.get("GROQ_API_KEY_6", os.getenv("GROQ_API_KEY_6", "")),
+                st.secrets.get("GROQ_API_KEY_7", os.getenv("GROQ_API_KEY_7", "")),
+                st.secrets.get("GROQ_API_KEY_8", os.getenv("GROQ_API_KEY_8", "")),
+                st.secrets.get("GROQ_API_KEY_9", os.getenv("GROQ_API_KEY_9", "")),
+                st.secrets.get("GROQ_API_KEY_10", os.getenv("GROQ_API_KEY_10", "")),
+                ]
     
     if api_key_index + 1 == len(api_keys):
         last_api_key_reached += 1
