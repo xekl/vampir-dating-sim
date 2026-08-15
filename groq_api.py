@@ -49,7 +49,6 @@ def get_next_groq_chat_model():
         # "openai/gpt-oss-20b",
         # "openai/gpt-oss-safeguard-20b", 
         "qwen/qwen3.6-27b",
-        "llama-3.1-8b-instant",
         "groq/compound", # not great at following instructions BUT HAS NO LIMIT
     ]
     chat_model_index = (chat_model_index + 1) % len(groq_chat_models)
@@ -65,7 +64,6 @@ def get_next_groq_analysis_model():
         "openai/gpt-oss-20b", 
         # "openai/gpt-oss-safeguard-20b", 
         "qwen/qwen3.6-27b", 
-        "llama-3.1-8b-instant",
         "groq/compound", # not great at following instructions BUT HAS NO LIMIT
     ]
 
