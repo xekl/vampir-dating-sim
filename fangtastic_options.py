@@ -13,8 +13,9 @@ OPTIONS = {
     # "api_choice": "groq",
     "api_choice": "ollama",
 
-    # Local model name used with Ollama (when api_choice == "ollama")
-    "local_model_name": "gemma4",
+    # Default model names for Ollama: separate models for chat and analysis
+    "ollama_chat_model": "gemma4",
+    "ollama_analysis_model": "gemma4",
 
     # Response timing: realistic (for production) vs short (for debug)
     # Values are (min_seconds, max_seconds) for initial delay and typing delay
@@ -29,4 +30,8 @@ OPTIONS = {
 
     # Maximum tokens or response length hint for local models
     "local_max_tokens": 300,
+
+    # Ollama HTTP endpoints (can be overridden)
+    "ollama_http_url": "http://localhost:11434/api/generate",
+    "ollama_http_chat_url": "http://localhost:11434/api/chat",
 }
