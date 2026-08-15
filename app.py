@@ -328,7 +328,7 @@ def profiles_page():
         # Maybe with a session_state variable to remember the scroll position?
         # TODO is there a way to add swiping gestures for mobile users? 
         # Streamlit doesn't have built-in support for that.
-        if st.button(" ⏪ ⏪ ⏪ ", use_container_width=True):
+        if st.button("< = = =", use_container_width=True):
             st.session_state.profile_index = (st.session_state.profile_index - 1) % len(characters_list)
             st.rerun()
     with col2:
@@ -339,7 +339,7 @@ def profiles_page():
             st.session_state.current_page = "chat"
             st.rerun()
     with col3:
-        if st.button(" ⏩ ⏩ ⏩ ", use_container_width=True):
+        if st.button("= = = >", use_container_width=True):
             st.session_state.profile_index = (st.session_state.profile_index + 1) % len(characters_list)
             st.rerun()
 
