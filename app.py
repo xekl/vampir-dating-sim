@@ -1,3 +1,4 @@
+
 import base64
 import random
 import time
@@ -5,13 +6,15 @@ from html import escape
 from pathlib import Path
 
 import streamlit as st
+
+from fangtastic_options import OPTIONS
 from character_loader import load_all_characters, resolve_profile_image_path
-from groq_api import chat_with_character, manage_dialog
+from llm_api import chat_with_character, manage_dialog
 from gist_logger import log_chat_to_gist
 
 # Configure page
 st.set_page_config(
-    page_title="Fangtastic - Vampire Dating",
+    page_title="Fangtastic - Dating For The Dark",
     page_icon="🧛",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -459,10 +462,12 @@ def chat_page():
         )
         st.session_state.characters[character["id"]]["management_result"] = management_result
 
-        # Get character response with a short, realistic typing delay.
-        time.sleep(random.uniform(5, 90)) # second wait before char starts typing
+        # Get character response with a delay that depends on debug mode.
+        # In debug mode delays are very short; otherwise use realistic pauses.
+        delay_cfg = OPTIONS["response_delay_debug"] if OPTIONS.get("debug") else OPTIONS["response_delay_realistic"]
+        time.sleep(random.uniform(*delay_cfg["initial"]))
         with st.spinner("tippt ..."):
-            time.sleep(random.uniform(4, 23)) # second wait after char starts typing
+            time.sleep(random.uniform(*delay_cfg["typing"]))
             response = chat_with_character(
                 character_description,
                 current_time=time.strftime("%a, %d %b %Y, %H:%M"),
@@ -503,4 +508,3 @@ else:
         profiles_page()
     elif st.session_state.current_page == "chat":
         chat_page()
-

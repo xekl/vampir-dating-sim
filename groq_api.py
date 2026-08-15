@@ -133,7 +133,7 @@ def manage_dialog(
     
     try:
 
-        print("Managing dialog with model:", groq_analysis_model)
+        print("Managing dialog with groq model:", groq_analysis_model)
         print()
         # print("prompt:", prompt)
         # print()
@@ -253,7 +253,7 @@ def chat_with_character(
     global groq_chat_model
     global last_api_key_reached
 
-    print("entering chat_with_character with model:", groq_chat_model)
+    print("entering chat_with_character with groq model:", groq_chat_model)
     print()
 
     try:
