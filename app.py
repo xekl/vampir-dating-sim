@@ -358,7 +358,7 @@ def chat_page():
     st.markdown(f'<div class="header">{character["name"]}</div>', unsafe_allow_html=True)
     
     # Buttons
-    col1, _, col3 = st.columns(3)
+    col1, debug_col, col3 = st.columns(3)
     with col1:
         if st.button("⬅️ Zurück", use_container_width=True):
             # Log the chat before leaving
@@ -381,6 +381,15 @@ def chat_page():
             st.session_state.current_page = "profiles"
             st.rerun()
     
+    # debug info (visible only in debug mode)
+    with debug_col:
+        if OPTIONS.get("debug"):
+            char_id = character["id"]
+            management_result = st.session_state.characters.get(char_id, {}).get("management_result", {})
+            interest = management_result.get("interest_level", 0)
+            interest = st.session_state.characters[character["id"]]["interest_analysis"]
+            st.markdown(f"interest lvl: {interest}")
+
     # state info 
     with col3:
         won = st.session_state.character_wins.get(character["id"], False)    
