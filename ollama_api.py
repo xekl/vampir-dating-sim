@@ -25,7 +25,6 @@ def format_chat_history_for_analysis(chat_history: List[Dict[str, str]]) -> str:
 	return "\n".join(formatted)
 
 
-
 def manage_dialog(
 	character_name: str,
 	character_strategy: str,
@@ -63,9 +62,8 @@ def manage_dialog(
 		print("Managing dialog with ollama model:", model)
 		print()
 
-		generation_url = OPTIONS.get("ollama_http_url", "http://localhost:11434/api/generate")
-		payload = {"model": model, "prompt": prompt, "max_tokens": max_tokens, "stream": False}
-		response = requests.post(generation_url, json=payload)
+		payload = {"model": model, "prompt": prompt, "max_tokens": max_tokens, "stream": False, "keep_alive": "10m"}
+		response = requests.post("http://localhost:11434/api/generate", json=payload)
 		response.raise_for_status()
 
 		try:
@@ -155,12 +153,15 @@ def chat_with_character(
 	
     # Call the Ollama chat endpoint
 	try:
-		chat_url = OPTIONS.get("ollama_http_chat_url", "http://localhost:11434/api/chat")
-		payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "stream": False}
-		response = requests.post(chat_url, json=payload)
+		payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "stream": False, "think": False, "keep_alive": "10m"}
+		response = requests.post("http://localhost:11434/api/chat", json=payload)
 		response.raise_for_status()
 		try:
 			response_json = response.json()
+
+			print("Ollama chat response JSON:", response_json)
+			print()
+
 			character_answer = response_json.get("message").get("content", "").strip()
 			return character_answer
 		except ValueError as e:

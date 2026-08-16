@@ -14,8 +14,10 @@ OPTIONS = {
     "api_choice": "ollama",
 
     # Default model names for Ollama: separate models for chat and analysis
-    "ollama_chat_model": "gemma4",
-    "ollama_analysis_model": "gemma4",
+    "ollama_chat_model": "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive", 
+    "ollama_analysis_model": "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive",
+    # more models 
+    # "gemma4" / "llama318b" / "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive" / "VladimirGav/gemma4-26b-16GB-VRAM-Uncensored"
 
     # Response timing: realistic (for production) vs short (for debug)
     # Values are (min_seconds, max_seconds) for initial delay and typing delay
@@ -30,8 +32,4 @@ OPTIONS = {
 
     # Maximum tokens or response length hint for local models
     "local_max_tokens": 300,
-
-    # Ollama HTTP endpoints (can be overridden)
-    "ollama_http_url": "http://localhost:11434/api/generate",
-    "ollama_http_chat_url": "http://localhost:11434/api/chat",
 }
