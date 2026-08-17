@@ -44,7 +44,7 @@ def get_next_groq_chat_model():
 
     groq_chat_models = [
         # see https://console.groq.com/docs/rate-limits
-        "llama-3.3-70b-versatile", # smartest chatter so far
+        # "llama-3.3-70b-versatile", # smartest chatter so far
         # "openai/gpt-oss-120b", # refuses to arrange meetings
         # "openai/gpt-oss-20b",
         # "openai/gpt-oss-safeguard-20b", 
@@ -59,7 +59,7 @@ def get_next_groq_analysis_model():
     global analysis_model_index
 
     groq_analysis_models = [
-        "llama-3.3-70b-versatile", # also smartest reasoner
+        # "llama-3.3-70b-versatile", # also smartest reasoner
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b", 
         # "openai/gpt-oss-safeguard-20b", 
