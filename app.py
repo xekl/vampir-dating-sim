@@ -475,11 +475,15 @@ def chat_page():
         # In debug mode delays are very short; otherwise use realistic pauses.
         delay_cfg = OPTIONS["response_delay_debug"] if OPTIONS.get("debug") else OPTIONS["response_delay_realistic"]
         time.sleep(random.uniform(*delay_cfg["initial"]))
+        if OPTIONS.get("current_time_override"): 
+            current_time = OPTIONS.get("current_time_override")
+        else:
+            current_time = time.strftime("%a, %d %b %Y, %H:%M")
         with st.spinner("tippt ..."):
             time.sleep(random.uniform(*delay_cfg["typing"]))
             response = chat_with_character(
                 character_description,
-                current_time=time.strftime("%a, %d %b %Y, %H:%M"),
+                current_time=current_time,
                 username=st.session_state.username,
                 chat_history=st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
                 management_result=st.session_state.characters[character["id"]]["management_result"],

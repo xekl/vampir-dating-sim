@@ -7,11 +7,15 @@ control debug flags, API choice, and model names.
 # Default options
 OPTIONS = {
     # Debug mode reduces waiting times and may enable extra logging
-    "debug": True,
+    "debug": False,
+
+    # Overwrite current time with this time if necessary
+    # "current_time_override": None,  # e.g. "2024-06-01 20:00"
+    "current_time_override": "Samstag, 15. August, 23:00",
 
     # API choice: "groq" (default, remote Groq API) or "ollama" (local models)
-    # "api_choice": "groq",
-    "api_choice": "ollama",
+    "api_choice": "groq",
+    # "api_choice": "ollama",
 
     # Default model names for Ollama: separate models for chat and analysis
     "ollama_chat_model": "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive", 
