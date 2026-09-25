@@ -1,0 +1,19 @@
+{
+  "username": "fanggirl",
+  "password": "blut1234",
+  "character_ids": [
+    "fanggirl_felix",
+    "fanggirl_michi",
+    "fanggirl_oleksandr",
+    "fanggirl_king",
+    "fanggirl_dreamcatcher"
+  ],
+  "profile": {
+    "nickname": "fanggirl",
+    "age": 3,
+    "gender": "sie/ihr",
+    "interests": ["Nachtspaziergänge", "Reinigungsmittel", "Adrenalin"],
+    "looking_for": ["Eine aufregende Verbindung", "Gemeinsame Nächte"],
+    "bio": "Neugierig auf die Wesen der Nacht und auf eine Verbindung, die sich echt anfühlt."
+  }
+}

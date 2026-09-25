@@ -92,6 +92,7 @@ def manage_dialog(
     character_strategy: str,
     previous_state: Dict[str, Any],
     chat_history: List[Dict[str, str]],
+    user_profile: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
 
     global groq_client
@@ -128,6 +129,14 @@ def manage_dialog(
         character_name = character_name,
         conversation_summary = conversation_summary,
         character_strategy = character_strategy,
+        user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+            nickname=(user_profile or {}).get("nickname", ""),
+            age=(user_profile or {}).get("age", ""),
+            gender=(user_profile or {}).get("gender", ""),
+            interests=", ".join((user_profile or {}).get("interests", [])),
+            looking_for=", ".join((user_profile or {}).get("looking_for", [])),
+            bio=(user_profile or {}).get("bio", ""),
+        ),
         previous_state_json = json.dumps(previous_state, ensure_ascii=False),
     )
     
@@ -213,7 +222,7 @@ def manage_dialog(
                 groq_analysis_model = get_next_groq_analysis_model()
                 last_api_key_reached = 0 # and reset key recursion check
 
-            return manage_dialog(character_name, character_strategy, previous_state, chat_history)
+            return manage_dialog(character_name, character_strategy, previous_state, chat_history, user_profile)
 
         print("error: ", e)
 
@@ -233,7 +242,8 @@ def chat_with_character(
     username: str,
     chat_history: List[Dict[str, str]],
     management_result: Dict[str, Any],
-    user_message: str
+    user_message: str,
+    user_profile: Dict[str, Any] | None = None,
 ) -> str:
     """
     Send a message to a character and get a response using Groq API
@@ -263,6 +273,14 @@ def chat_with_character(
             current_time = current_time,
             character_description = character_description,
             username = username,
+            user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+                nickname=(user_profile or {}).get("nickname", ""),
+                age=(user_profile or {}).get("age", ""),
+                gender=(user_profile or {}).get("gender", ""),
+                interests=", ".join((user_profile or {}).get("interests", [])),
+                looking_for=", ".join((user_profile or {}).get("looking_for", [])),
+                bio=(user_profile or {}).get("bio", ""),
+            ),
             # next_turn_instructions = management_result.get("char_instructions")
             # interest_analysis_json = json.dumps(interest_analysis, ensure_ascii=False),
         )
@@ -349,6 +367,6 @@ def chat_with_character(
                 groq_chat_model = get_next_groq_chat_model()
                 last_api_key_reached = 0 # and reset key recursion check
 
-            return chat_with_character(character_description, current_time, username, chat_history, management_result, user_message)
+            return chat_with_character(character_description, current_time, username, chat_history, management_result, user_message, user_profile)
 
         return f"Fehler bei der Verbindung: {str(e)}"

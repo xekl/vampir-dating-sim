@@ -11,7 +11,7 @@ OPTIONS = {
 
     # Overwrite current time with this time if necessary
     # "current_time_override": None,  # e.g. "2024-06-01 20:00"
-    "current_time_override": "Samstag, 15. August, 23:00",
+    # "current_time_override": "Samstag, 15. August, 23:00",
 
     # API choice: "groq" (default, remote Groq API) or "ollama" (local models)
     "api_choice": "groq",

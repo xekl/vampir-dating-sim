@@ -20,19 +20,19 @@ else:
     from groq_api import chat_with_character as _groq_chat
 
 
-def manage_dialog(character_name: str, character_strategy: str, previous_state: Dict[str, Any], chat_history: List[Dict[str, str]]) -> Dict[str, Any]:
+def manage_dialog(character_name: str, character_strategy: str, previous_state: Dict[str, Any], chat_history: List[Dict[str, str]], user_profile: Dict[str, Any] | None = None) -> Dict[str, Any]:
     """Dispatch manage_dialog to the selected backend."""
 
     if we_use_ollama:
-        return _ollama_manage_dialog(character_name, character_strategy, previous_state, chat_history)
+        return _ollama_manage_dialog(character_name, character_strategy, previous_state, chat_history, user_profile)
     else:
-        return _groq_manage_dialog(character_name, character_strategy, previous_state, chat_history)
+        return _groq_manage_dialog(character_name, character_strategy, previous_state, chat_history, user_profile)
 
 
-def chat_with_character(character_description: str, current_time: str, username: str, chat_history: List[Dict[str, str]], management_result: Dict[str, Any], user_message: str) -> str:
+def chat_with_character(character_description: str, current_time: str, username: str, chat_history: List[Dict[str, str]], management_result: Dict[str, Any], user_message: str, user_profile: Dict[str, Any] | None = None) -> str:
     """Dispatch chat_with_character to the selected backend."""
 
     if we_use_ollama:
-        return _ollama_chat(character_description, current_time, username, chat_history, management_result, user_message)
+        return _ollama_chat(character_description, current_time, username, chat_history, management_result, user_message, user_profile)
     else:
-        return _groq_chat(character_description, current_time, username, chat_history, management_result, user_message)
+        return _groq_chat(character_description, current_time, username, chat_history, management_result, user_message, user_profile)

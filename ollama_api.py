@@ -30,6 +30,7 @@ def manage_dialog(
 	character_strategy: str,
 	previous_state: Dict[str, Any],
 	chat_history: List[Dict[str, str]],
+	user_profile: Dict[str, Any] | None = None,
 	) -> Dict[str, Any]:
 
 	previous_level = int(previous_state.get("interest_level", 0))
@@ -51,6 +52,14 @@ def manage_dialog(
 		character_name=character_name,
 		conversation_summary=conversation_summary,
 		character_strategy=character_strategy,
+		user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+			nickname=(user_profile or {}).get("nickname", ""),
+			age=(user_profile or {}).get("age", ""),
+			gender=(user_profile or {}).get("gender", ""),
+			interests=", ".join((user_profile or {}).get("interests", [])),
+			looking_for=", ".join((user_profile or {}).get("looking_for", [])),
+			bio=(user_profile or {}).get("bio", ""),
+		),
 		previous_state_json=json.dumps(previous_state, ensure_ascii=False),
 	)
 
@@ -120,7 +129,8 @@ def chat_with_character(
 	username: str,
 	chat_history: List[Dict[str, str]],
 	management_result: Dict[str, Any],
-	user_message: str
+	user_message: str,
+	user_profile: Dict[str, Any] | None = None,
 ) -> str:
 
 	model = OPTIONS.get("ollama_chat_model", "gemma4")
@@ -133,6 +143,14 @@ def chat_with_character(
 		current_time=current_time,
 		character_description=character_description,
 		username=username,
+		user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+			nickname=(user_profile or {}).get("nickname", ""),
+			age=(user_profile or {}).get("age", ""),
+			gender=(user_profile or {}).get("gender", ""),
+			interests=", ".join((user_profile or {}).get("interests", [])),
+			looking_for=", ".join((user_profile or {}).get("looking_for", [])),
+			bio=(user_profile or {}).get("bio", ""),
+		),
 	)
 	messages = [
 		{"role": "system", "content": char_system_prompt}

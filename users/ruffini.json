@@ -1,0 +1,17 @@
+{
+  "username": "ruffini",
+  "password": "test",
+  "character_ids": [
+    "fanggirl_michi",
+    "fanggirl_king",
+    "fanggirl_dreamcatcher"
+  ],
+  "profile": {
+    "nickname": "Ruffini!",
+    "age": 107,
+    "gender": "sie/ihr",
+    "interests": ["Kunst", "Authentizität", "Geld"],
+    "looking_for": ["Spaß", "Tests"],
+    "bio": "Wenn es dich berührt, ist es echt."
+  }
+}

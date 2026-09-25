@@ -11,6 +11,7 @@ from fangtastic_options import OPTIONS
 from character_loader import load_all_characters, resolve_profile_image_path
 from llm_api import chat_with_character, manage_dialog
 from gist_logger import log_chat_to_gist
+from user_loader import load_all_users, users_by_username
 
 # Configure page
 st.set_page_config(
@@ -179,6 +180,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Load user and character data from the filesystem.
+USER_OPTIONS = users_by_username(load_all_users())
+
 # Initialize session state
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -192,10 +196,40 @@ if "logged_in" not in st.session_state:
     st.session_state.character_interests = {}
     st.session_state.character_looking_for = {}
 
-# Load characters on startup
-if not st.session_state.characters:
-    characters = load_all_characters()
-    for char in characters:
+if "all_characters" not in st.session_state:
+    st.session_state.all_characters = load_all_characters()
+
+
+def get_current_user_profile() -> dict:
+    """Return the logged-in user's profile loaded from its user JSON."""
+    # TODO make sure this also reflects and stores manual changes made on the profile page
+    username = st.session_state.get("username") or ""
+    user = USER_OPTIONS.get(username, {})
+    return user.setdefault("profile", {
+        "nickname": username,
+        "age": 18,
+        "gender": "",
+        "interests": [],
+        "looking_for": [],
+        "bio": "",
+    })
+
+
+def configure_user_characters(username: str) -> None:
+    """Initialize only the characters associated with the logged-in user."""
+    user = USER_OPTIONS.get(username, {})
+    character_ids = set(user.get("character_ids", []))
+    st.session_state.characters = {}
+    st.session_state.character_chats = {}
+    st.session_state.character_wins = {}
+    st.session_state.character_loses = {}
+    st.session_state.character_interests = {}
+    st.session_state.character_looking_for = {}
+    st.session_state.profile_index = 0
+
+    for char in st.session_state.all_characters:
+        if char.get("id") not in character_ids:
+            continue
         char["interest_analysis"] = {"meeting_planned": False, "interest_level": 0, "reason": ""}
         st.session_state.characters[char["id"]] = char
         st.session_state.character_chats[char["id"]] = []
@@ -246,7 +280,7 @@ def render_character_card_html(character: dict, won: bool, lost: bool) -> str:
     elif lost:
         body_html = f'<div class="lose-message">🚫 {escape(character.get("name", ""))} hat dich blockiert.</div>'
     else:
-        body_html = "" # we do not ever show interest to the user, it is an internal metric for the game logic only
+        body_html = "" # we do not ever show interest to the user, it is an internal/debugging metric for the game logic only
 
     return f"""
     <div class="character-card">
@@ -280,10 +314,11 @@ def login_page():
         st.markdown("---")
         
         if st.button("🌙 EINLOGGEN", use_container_width=True):
-            # Hardcoded credentials
-            if username == "fanggirl" and password == "blut1234":
+            login_option = USER_OPTIONS.get(username)
+            if login_option and password == login_option["password"]:
                 st.session_state.logged_in = True
                 st.session_state.username = username
+                configure_user_characters(username)
                 st.session_state.current_page = "profiles"
                 st.rerun()
             else:
@@ -294,54 +329,88 @@ def login_page():
 
 def profiles_page():
     """Render profile overview with swiping"""
+    # TODO actually add swiping??
     st.markdown(f'<div class="header">🧛 FANGTASTIC 🧛</div>', unsafe_allow_html=True)
-    
-    
-    st.markdown("---")
-    st.markdown('<div style="text-align: center; color: #b0b0b0;">Diese Wesen interessieren sich für dich ...</div>', unsafe_allow_html=True)
-    st.markdown("---")
-    
-    # Initialize character index if needed
-    if "profile_index" not in st.session_state:
-        st.session_state.profile_index = 0
-    
-    characters_list = list(st.session_state.characters.values())
-    if not characters_list:
-        st.error("Keine Charaktere gefunden!")
-        return
-    
-    current_char = characters_list[st.session_state.profile_index]
-    
-    # Display character card
-    won = st.session_state.character_wins.get(current_char["id"], False)
-    lost = st.session_state.character_loses.get(current_char["id"], False)
-    st.markdown(
-        render_character_card_html(current_char, won, lost),
-        unsafe_allow_html=True,
-    )
 
-    # Action buttons
-    col1, col2, col3 = st.columns(3)
-    with col1:
+    discover_tab, own_profile_tab = st.tabs(["Entdecken", "Mein Profil"])
+    with own_profile_tab:
+        user_profile_page()
+
+    with discover_tab:
+        st.markdown("---")
+        st.markdown('<div style="text-align: center; color: #b0b0b0;">Diese Wesen interessieren sich für dich ...</div>', unsafe_allow_html=True)
+        st.markdown("---")
+
+        if "profile_index" not in st.session_state:
+            st.session_state.profile_index = 0
+
+        characters_list = list(st.session_state.characters.values())
+        if not characters_list:
+            st.error("Keine Wesen gefunden")
+            return
+
+        current_char = characters_list[st.session_state.profile_index]
+        won = st.session_state.character_wins.get(current_char["id"], False)
+        lost = st.session_state.character_loses.get(current_char["id"], False)
+        st.markdown(
+            render_character_card_html(current_char, won, lost),
+            unsafe_allow_html=True,
+        )
+
+
+        # Profile navigation buttons
+        col1, col2, col3 = st.columns(3)
+
         # TODO is there a way to prevent the whole page from jumping to the top 
         # on the rerun() when pressing the left/right buttons? 
         # Maybe with a session_state variable to remember the scroll position?
         # TODO is there a way to add swiping gestures for mobile users? 
-        # Streamlit doesn't have built-in support for that.
-        if st.button("< = = =", use_container_width=True):
-            st.session_state.profile_index = (st.session_state.profile_index - 1) % len(characters_list)
-            st.rerun()
-    with col2:
-        # TODO style this button (ONLY the chat button) to distinguish it from the left/right buttons
-        # e.g., a pink outline or a glowing effect, to make it more inviting to click
-        if st.button("CHATTEN", use_container_width=True):
-            st.session_state.current_character = current_char["id"]
-            st.session_state.current_page = "chat"
-            st.rerun()
-    with col3:
-        if st.button("= = = >", use_container_width=True):
-            st.session_state.profile_index = (st.session_state.profile_index + 1) % len(characters_list)
-            st.rerun()
+        # Streamlit doesn't seem to have built-in support for that ...
+
+        with col1:
+            if st.button("< = = =", use_container_width=True):
+                st.session_state.profile_index = (st.session_state.profile_index - 1) % len(characters_list)
+                st.rerun()
+        with col2:
+            if st.button("CHATTEN", use_container_width=True):
+                st.session_state.current_character = current_char["id"]
+                st.session_state.current_page = "chat"
+                st.rerun()
+            # TODO style the CHATTTEN button (ONLY the chat button) to distinguish it from the left/right buttons
+            # e.g., a pink outline or a glowing effect, to make it more inviting to click
+        with col3:
+            if st.button("= = = >", use_container_width=True):
+                st.session_state.profile_index = (st.session_state.profile_index + 1) % len(characters_list)
+                st.rerun()
+
+
+def user_profile_page():
+    """Render and save the logged-in user's dating profile."""
+    profile = get_current_user_profile()
+    st.subheader("Mein Profil")
+    st.caption("So sehen dich andere auf Fangtastic.")
+
+    with st.form("user_profile_form"):
+        nickname = st.text_input("Spitzname", value=profile.get("nickname", ""), disabled=True)
+        age = st.number_input("Alter", min_value=18, max_value=120, value=int(profile.get("age", 18)), step=1)
+        gender = st.text_input("Geschlecht", value=profile.get("gender", ""))
+        interests = st.text_input("Interessen", value=", ".join(profile.get("interests", [])))
+        looking_for = st.text_input("Ich suche", value=", ".join(profile.get("looking_for", [])))
+        bio = st.text_area("Bio", value=profile.get("bio", ""), height=120)
+
+        if st.form_submit_button("Profil speichern", use_container_width=True):
+            profile.update({
+                "nickname": nickname.strip(),
+                "age": age,
+                "gender": gender.strip(),
+                "interests": [item.strip() for item in interests.split(",") if item.strip()],
+                "looking_for": [item.strip() for item in looking_for.split(",") if item.strip()],
+                "bio": bio.strip(),
+            })
+            st.success("Dein Profil wurde gespeichert.")
+            # TODO actually do that and store profile changes to
+            # 1) use in the prompts for the characters, and
+            # 2) allow saving/exporting for future sessions
 
 def chat_page():
     """Render chat interface"""
@@ -467,7 +536,8 @@ def chat_page():
             character["name"],
             character_strategy,
             st.session_state.characters[character["id"]]["interest_analysis"],
-            st.session_state.character_chats[character["id"]]
+            st.session_state.character_chats[character["id"]],
+            get_current_user_profile(),
         )
         st.session_state.characters[character["id"]]["management_result"] = management_result
 
@@ -487,7 +557,8 @@ def chat_page():
                 username=st.session_state.username,
                 chat_history=st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
                 management_result=st.session_state.characters[character["id"]]["management_result"],
-                user_message=user_input
+                user_message=user_input,
+                user_profile=get_current_user_profile(),
             )
         
         # Add character response
