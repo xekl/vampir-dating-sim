@@ -44,12 +44,12 @@ def get_next_groq_chat_model():
 
     groq_chat_models = [
         # see https://console.groq.com/docs/rate-limits
-        # "llama-3.3-70b-versatile", # smartest chatter so far
+        # "llama-3.3-70b-versatile", # smartest chatter so far, depreciated -_-
         # "openai/gpt-oss-120b", # refuses to arrange meetings
         # "openai/gpt-oss-20b",
         # "openai/gpt-oss-safeguard-20b", 
-        "qwen/qwen3.6-27b",
-        "groq/compound", # not great at following instructions BUT HAS NO LIMIT
+        "qwen/qwen3.8-27b",
+        # "groq/compound", # not great at following instructions, depreciated -_-
     ]
     chat_model_index = (chat_model_index + 1) % len(groq_chat_models)
     return groq_chat_models[chat_model_index]
@@ -59,12 +59,12 @@ def get_next_groq_analysis_model():
     global analysis_model_index
 
     groq_analysis_models = [
-        # "llama-3.3-70b-versatile", # also smartest reasoner
+        # "llama-3.3-70b-versatile", # also smartest reasoner, depreciated -_-
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b", 
         # "openai/gpt-oss-safeguard-20b", 
-        "qwen/qwen3.6-27b", 
-        "groq/compound", # not great at following instructions BUT HAS NO LIMIT
+        "qwen/qwen3.8-27b",
+        # "groq/compound", # not great at following instructions, depreciated -_-
     ]
 
     analysis_model_index = (analysis_model_index + 1) % len(groq_analysis_models)
@@ -336,7 +336,8 @@ def chat_with_character(
             {"role": "user", "content": prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn = response)}
         ]
         is_refusal = groq_client.chat.completions.create(
-                model="groq/compound", # you can do this, compound!
+                # model="groq/compound", # you can do this, compound!
+                model=groq_analysis_model, 
                 messages=check_refusal_messages,
                 temperature=1,
                 max_tokens=50,
