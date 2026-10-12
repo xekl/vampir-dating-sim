@@ -315,6 +315,11 @@ def login_page():
         
         if st.button("🌙 EINLOGGEN", use_container_width=True):
             login_option = USER_OPTIONS.get(username)
+            # also allow for different cases
+            if not login_option:
+                login_option = USER_OPTIONS.get(username.lower())
+            if not login_option:
+                login_option = USER_OPTIONS.get(username.upper())
             if login_option and password == login_option["password"]:
                 st.session_state.logged_in = True
                 st.session_state.username = username
@@ -392,7 +397,7 @@ def user_profile_page():
 
     with st.form("user_profile_form"):
         nickname = st.text_input("Spitzname", value=profile.get("nickname", ""), disabled=True)
-        age = st.number_input("Alter", min_value=18, max_value=120, value=int(profile.get("age", 18)), step=1)
+        age = st.number_input("Alter", value=int(profile.get("age", 18)), step=1)
         gender = st.text_input("Geschlecht", value=profile.get("gender", ""))
         interests = st.text_input("Interessen", value=", ".join(profile.get("interests", [])))
         looking_for = st.text_input("Ich suche", value=", ".join(profile.get("looking_for", [])))
