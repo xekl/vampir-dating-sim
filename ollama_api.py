@@ -15,6 +15,13 @@ import prompt_library
 from fangtastic_options import OPTIONS
 
 
+# Default model names for Ollama: separate models for chat and analysis
+ollama_chat_model = "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive", 
+ollama_analysis_model = "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive",
+# more models 
+# "gemma4" / "llama318b" / "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive" / "VladimirGav/gemma4-26b-16GB-VRAM-Uncensored"
+
+
 def format_chat_history_for_analysis(chat_history: List[Dict[str, str]]) -> str:
 	formatted = []
 	message_cap = 7
@@ -63,15 +70,14 @@ def manage_dialog(
 		previous_state_json=json.dumps(previous_state, ensure_ascii=False),
 	)
 
-	model = OPTIONS.get("ollama_analysis_model", "gemma4")
 	max_tokens = OPTIONS.get("local_max_tokens", 300)
 
 	try:
 		
-		print("Managing dialog with ollama model:", model)
+		print("Managing dialog with ollama model:", ollama_analysis_model)
 		print()
 
-		payload = {"model": model, "prompt": prompt, "max_tokens": max_tokens, "stream": False, "keep_alive": "10m"}
+		payload = {"model": ollama_analysis_model, "prompt": prompt, "max_tokens": max_tokens, "stream": False, "keep_alive": "10m"}
 		response = requests.post("http://localhost:11434/api/generate", json=payload)
 		response.raise_for_status()
 
@@ -133,10 +139,9 @@ def chat_with_character(
 	user_profile: Dict[str, Any] | None = None,
 ) -> str:
 
-	model = OPTIONS.get("ollama_chat_model", "gemma4")
 	max_tokens = OPTIONS.get("local_max_tokens", 300)
 	
-	print("entering chat_with_character with ollama model:", model)
+	print("entering chat_with_character with ollama model:", ollama_chat_model)
 
 	# Build system prompt
 	char_system_prompt = prompt_library.CHARACTER_REPLY_PROMPT.format(
@@ -171,7 +176,7 @@ def chat_with_character(
 	
     # Call the Ollama chat endpoint
 	try:
-		payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "stream": False, "think": False, "keep_alive": "10m"}
+		payload = {"model": ollama_chat_model, "messages": messages, "max_tokens": max_tokens, "stream": False, "think": False, "keep_alive": "10m"}
 		response = requests.post("http://localhost:11434/api/chat", json=payload)
 		response.raise_for_status()
 		try:

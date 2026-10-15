@@ -6,6 +6,7 @@ control debug flags, API choice, and model names.
 
 # Default options
 OPTIONS = {
+
     # Debug mode reduces waiting times and may enable extra logging
     "debug": True,
 
@@ -14,15 +15,9 @@ OPTIONS = {
     # "current_time_override": "Samstag, 15. August, 23:00",
 
     # API choice: "groq", "open_router" (remote APIs), or "ollama" (local models)
-    "api_choice": "groq",
-    # "api_choice": "open_router",
+    # "api_choice": "groq",
+    "api_choice": "open_router",
     # "api_choice": "ollama",
-
-    # Default model names for Ollama: separate models for chat and analysis
-    "ollama_chat_model": "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive", 
-    "ollama_analysis_model": "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive",
-    # more models 
-    # "gemma4" / "llama318b" / "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive" / "VladimirGav/gemma4-26b-16GB-VRAM-Uncensored"
 
     # Response timing: realistic (for production) vs short (for debug)
     # Values are (min_seconds, max_seconds) for initial delay and typing delay
