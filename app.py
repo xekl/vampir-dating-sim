@@ -421,7 +421,7 @@ def chat_page():
             chat_history = character.get("messages", [])
             interest = character.get("interest_level", -1)
             won = character.get("meeting_planned", False)
-            lost = character.get("blocked_user", False)
+            lost = character.get("user_blocked", False)
 
             if chat_history:
                 #TODO maybe log with every message instead
@@ -447,7 +447,7 @@ def chat_page():
     # state info 
     with col3:
         won = character.get("meeting_planned", False)    
-        lost = character.get("blocked_user", False)    
+        lost = character.get("user_blocked", False)    
         if won:
             st.button("✓ TREFFEN GEPLANT!", disabled=True, use_container_width=True)
         if lost:

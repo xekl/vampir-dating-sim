@@ -1,10 +1,4 @@
 
-- debug interest_level tracking sauber machen 
-
-- dreamcatcher auf Profilliste nicht geblockt??
-
-- add logout button (to user profile?)
-
 - pimp logging with gist:
     fix original logging 
     introduce error logging 
@@ -16,7 +10,7 @@
 
 - Figuren schreiben von sich aus? oder haben schon einen ersten Turn?
 
-- format_chat_history_for_analysis in llm_api umlegen und für beide APIs dort schon umformatieren
+- add logout button (to user profile?)
 
 - insert translation step? maybe dialog/progression gets better when prompting and responds happen in English and are just translated to German before writing to the chat
 

@@ -12,5 +12,5 @@
   "messages": [],
   "interest_level": 0,
   "meeting_arranged": false,
-  "blocked_user": true
+  "user_blocked": true
 }
