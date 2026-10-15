@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 import streamlit as st
 from groq import Groq
 
-import prompt_library
+import llm_prompt_library
 
 
 api_key_index = -1
@@ -125,11 +125,11 @@ def manage_dialog(
 
     conversation_summary = format_chat_history_for_analysis(chat_history)
 
-    prompt = prompt_library.DIALOG_MANAGEMENT_PROMPT.format(
+    prompt = llm_prompt_library.DIALOG_MANAGEMENT_PROMPT.format(
         character_name = character_name,
         conversation_summary = conversation_summary,
         character_strategy = character_strategy,
-        user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+        user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
             nickname=(user_profile or {}).get("nickname", ""),
             age=(user_profile or {}).get("age", ""),
             gender=(user_profile or {}).get("gender", ""),
@@ -269,11 +269,11 @@ def chat_with_character(
     try:
         
         # Build system prompt
-        char_system_prompt = prompt_library.CHARACTER_REPLY_PROMPT.format(
+        char_system_prompt = llm_prompt_library.CHARACTER_REPLY_PROMPT.format(
             current_time = current_time,
             character_description = character_description,
             username = username,
-            user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+            user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
                 nickname=(user_profile or {}).get("nickname", ""),
                 age=(user_profile or {}).get("age", ""),
                 gender=(user_profile or {}).get("gender", ""),
@@ -333,7 +333,7 @@ def chat_with_character(
 
         # refusal filter: if model refuses, overwrite answer with fake Fangtastic blocker
         check_refusal_messages = [
-            {"role": "user", "content": prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn = response)}
+            {"role": "user", "content": llm_prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn = response)}
         ]
         is_refusal = groq_client.chat.completions.create(
                 # model="groq/compound", # you can do this, compound!

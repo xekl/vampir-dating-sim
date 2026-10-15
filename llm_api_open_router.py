@@ -8,8 +8,8 @@ from typing import Any, Dict, List
 import requests
 import streamlit as st
 
-import prompt_library
-from fangtastic_options import OPTIONS
+import llm_prompt_library
+from app_options import OPTIONS
 
 
 OPENROUTER_CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -100,11 +100,11 @@ def manage_dialog(
             "char_instructions": "",
         }
 
-    prompt = prompt_library.DIALOG_MANAGEMENT_PROMPT.format(
+    prompt = llm_prompt_library.DIALOG_MANAGEMENT_PROMPT.format(
         character_name=character_name,
         conversation_summary=format_chat_history_for_analysis(chat_history),
         character_strategy=character_strategy,
-        user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+        user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
             nickname=(user_profile or {}).get("nickname", ""),
             age=(user_profile or {}).get("age", ""),
             gender=(user_profile or {}).get("gender", ""),
@@ -166,11 +166,11 @@ def chat_with_character(
     user_profile: Dict[str, Any] | None = None,
 ) -> str:
     
-    char_system_prompt = prompt_library.CHARACTER_REPLY_PROMPT.format(
+    char_system_prompt = llm_prompt_library.CHARACTER_REPLY_PROMPT.format(
         current_time=current_time,
         character_description=character_description,
         username=username,
-        user_profile=prompt_library.USER_PROFILE_CONTEXT.format(
+        user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
             nickname=(user_profile or {}).get("nickname", ""),
             age=(user_profile or {}).get("age", ""),
             gender=(user_profile or {}).get("gender", ""),
@@ -201,7 +201,7 @@ def chat_with_character(
         try: 
             refusal_check = _create_completion(
                 open_router_analysis_model,
-                [{"role": "user", "content": prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn=answer)}],
+                [{"role": "user", "content": llm_prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn=answer)}],
                 50,
                 temperature=1,
             ).lower()
