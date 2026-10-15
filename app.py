@@ -538,14 +538,12 @@ def chat_page():
             response = chat_with_character(
                 character.get("character_description", ""),
                 current_time=current_time,
-                username=st.session_state.username,
-                chat_history=character.get("messages")[:-1],  # Exclude latest user message for context #TODO revise this, maybe keep message instead
+                chat_history=character.get("messages"),
                 interest_level=character.get("interest_level"),
                 user_blocked=character.get("user_blocked"),
                 meeting_planned=character.get("meeting_planned"),
                 next_turn_instructions=next_turn_instructions,
-                user_message=user_input, #TODO because why is it added here again duh
-                user_profile=get_current_user_profile(), #TODO this contains the name from above
+                user_profile=get_current_user_profile(), 
             )
         
         # Add character response

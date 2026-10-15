@@ -6,191 +6,55 @@ the generated text. It provides `manage_dialog` and
 rest of the app can call either backend interchangeably.
 """
 
-import json
-import re
 from typing import Any, Dict, List
 
 import requests
-import llm_prompt_library
 from app_options import OPTIONS
 
 
+OLLAMA_CHAT_COMPLETIONS_URL = "http://localhost:11434/api/chat"
+
 # Default model names for Ollama: separate models for chat and analysis
-ollama_chat_model = "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive", 
-ollama_analysis_model = "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive",
+# ollama_chat_model = "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive"
+# ollama_analysis_model = "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive"
+ollama_chat_model = "gemma4"
+ollama_analysis_model = "gemma4"
 # more models 
 # "gemma4" / "llama318b" / "fredrezones55/Gemma-4-Uncensored-HauhauCS-Aggressive" / "VladimirGav/gemma4-26b-16GB-VRAM-Uncensored"
 
 
-def format_chat_history_for_analysis(chat_history: List[Dict[str, str]]) -> str:
-	formatted = []
-	message_cap = 7
-	for msg in chat_history[-message_cap:]:
-		role = "Spieler" if msg.get("role") == "user" else "Charakter"
-		content = msg.get("content", "")
-		formatted.append(f"{role}: {content}")
-	return "\n".join(formatted)
+def get_analysis_model() -> str:
+    return ollama_analysis_model
 
+def get_chat_model() -> str:
+    return ollama_chat_model
 
-def manage_dialog(
-	character_name: str,
-	character_strategy: str,
-	previous_state: Dict[str, Any],
-	chat_history: List[Dict[str, str]],
-	user_profile: Dict[str, Any] | None = None,
-	) -> Dict[str, Any]:
+def create_chat_completion(model: str, messages: List[Dict[str, str]], max_tokens: int | None = None, temperature: float | None = None, mode: str | None = None) -> str:
 
-	previous_level = int(previous_state.get("interest_level", 0))
-	previous_meeting = bool(previous_state.get("meeting_planned", False))
-	previous_blocked = bool(previous_state.get("user_blocked", False))
+	payload: Dict[str, Any] = {
+		"model": model,
+		"messages": messages,
+		"max_tokens": OPTIONS.get("local_max_tokens", 300),
+		"stream": False, 
+		"keep_alive": "10m",
+	}
 
-	if not chat_history or len(chat_history) < 2:
-		return {
-			"meeting_planned": False,
-			"interest_level": previous_level,
-			"user_blocked": False,
-			"reason": "Noch keine Nachricht.",
-			"char_instructions": "",
-		}
+	if temperature is not None:
+		payload["temperature"] = temperature
+	if max_tokens is not None:
+		payload["max_tokens"] = max_tokens
 
-	conversation_summary = format_chat_history_for_analysis(chat_history)
-
-	prompt = llm_prompt_library.DIALOG_MANAGEMENT_PROMPT.format(
-		character_name=character_name,
-		conversation_summary=conversation_summary,
-		character_strategy=character_strategy,
-		user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
-			nickname=(user_profile or {}).get("nickname", ""),
-			age=(user_profile or {}).get("age", ""),
-			gender=(user_profile or {}).get("gender", ""),
-			interests=", ".join((user_profile or {}).get("interests", [])),
-			looking_for=", ".join((user_profile or {}).get("looking_for", [])),
-			bio=(user_profile or {}).get("bio", ""),
-		),
-		previous_state_json=json.dumps(previous_state, ensure_ascii=False),
-	)
-
-	max_tokens = OPTIONS.get("local_max_tokens", 300)
+	response = requests.post(OLLAMA_CHAT_COMPLETIONS_URL, json=payload)
+	response.raise_for_status()
 
 	try:
-		
-		print("Managing dialog with ollama model:", ollama_analysis_model)
-		print()
+		response_json = response.json()
+		response_text = response_json.get("message").get("content")
 
-		payload = {"model": ollama_analysis_model, "prompt": prompt, "max_tokens": max_tokens, "stream": False, "keep_alive": "10m"}
-		response = requests.post("http://localhost:11434/api/generate", json=payload)
-		response.raise_for_status()
+	except Exception as error:
+		#TODO log error to error gist
+		print("Error parsing Ollama text generation response as JSON:", str(error))
+		print("response_json =", response_json)
+		return response
 
-		try:
-			response_json = response.json()
-			response_text = response_json["response"].strip()
-
-		except ValueError as e:
-			print("Error parsing Ollama text generation response as JSON:", e)
-			return response.text.strip()
-		
-		print("Dialog management response:", response_text)
-		print()
-		
-		match = re.search(r"\{.*\}", response_text, re.S)
-		if match:
-			parsed = json.loads(match.group(0))
-			interest_level = int(parsed.get("interest_level", previous_level))
-			interest_level = min(100, max(0, interest_level))
-			delta = interest_level - previous_level
-			if abs(delta) > 15:
-				interest_level = previous_level + max(-15, min(15, delta))
-			meeting_planned = bool(parsed.get("meeting_planned", False))
-			user_blocked = bool(parsed.get("user_blocked", False))
-			char_instructions = str(parsed.get("char_instructions", ""))
-			return {
-				"meeting_planned": meeting_planned,
-				"interest_level": interest_level,
-				"user_blocked": user_blocked,
-				"reason": str(parsed.get("reason", ""))[:160],
-				"char_instructions": char_instructions,
-			}
-
-		return {
-			"meeting_planned": previous_meeting,
-			"interest_level": previous_level,
-			"user_blocked": previous_blocked,
-			"reason": "Kein JSON, nur: " + response_text[:200],
-			"char_instructions": "",
-		}
-
-	except Exception as e:
-		return {
-			"meeting_planned": False,
-			"interest_level": previous_level,
-			"user_blocked": previous_blocked,
-			"reason": f"Fehler: {str(e)[:140]}",
-			"char_instructions": "",
-		}
-
-
-def chat_with_character(
-	character_description: str,
-	current_time: str,
-	username: str,
-	chat_history: List[Dict[str, str]],
-	management_result: Dict[str, Any],
-	user_message: str,
-	user_profile: Dict[str, Any] | None = None,
-) -> str:
-
-	max_tokens = OPTIONS.get("local_max_tokens", 300)
-	
-	print("entering chat_with_character with ollama model:", ollama_chat_model)
-
-	# Build system prompt
-	char_system_prompt = llm_prompt_library.CHARACTER_REPLY_PROMPT.format(
-		current_time=current_time,
-		character_description=character_description,
-		username=username,
-		user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
-			nickname=(user_profile or {}).get("nickname", ""),
-			age=(user_profile or {}).get("age", ""),
-			gender=(user_profile or {}).get("gender", ""),
-			interests=", ".join((user_profile or {}).get("interests", [])),
-			looking_for=", ".join((user_profile or {}).get("looking_for", [])),
-			bio=(user_profile or {}).get("bio", ""),
-		),
-	)
-	messages = [
-		{"role": "system", "content": char_system_prompt}
-	]
-
-	# print("char_system_prompt:", char_system_prompt)
-	# print()
-
-	# Add chat history
-	messages.extend(chat_history)
-
-	# Add new user message
-	messages.append({"role": "user", "content": user_message})
-
-	# Add next turn instructions
-	next_turn_instructions = management_result.get("char_instructions")
-	messages.append({"role": "user", "content": "system_prompt-Ergänzung. In deinem nächsten Turn: " + next_turn_instructions})
-	
-    # Call the Ollama chat endpoint
-	try:
-		payload = {"model": ollama_chat_model, "messages": messages, "max_tokens": max_tokens, "stream": False, "think": False, "keep_alive": "10m"}
-		response = requests.post("http://localhost:11434/api/chat", json=payload)
-		response.raise_for_status()
-		try:
-			response_json = response.json()
-
-			print("Ollama chat response JSON:", response_json)
-			print()
-
-			character_answer = response_json.get("message").get("content", "").strip()
-			return character_answer
-		except ValueError as e:
-			print("Error parsing Ollama chat response as JSON:", e)
-			return response.text.strip()
-	
-	except Exception as e:
-		return f"Fehler bei der Verbindung (ollama chat): {str(e)}"
-		
+	return response_text

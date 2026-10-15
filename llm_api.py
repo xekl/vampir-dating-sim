@@ -8,50 +8,167 @@ or a local Ollama-based implementation, depending on the options in
 
 from typing import Any, Dict, List
 from app_options import OPTIONS
+import llm_prompt_library
+import json 
+import re 
+
 
 api_choice = str(OPTIONS.get("api_choice", "groq")).lower()
 print("api_choice:", api_choice)
 
-# Import backends lazily to avoid importing heavy deps when not needed
+
+# Import backend lazily to avoid importing heavy deps when not needed
 if api_choice == "ollama":
-    from llm_api_ollama import manage_dialog as _ollama_manage_dialog
-    from llm_api_ollama import chat_with_character as _ollama_chat
+    from llm_api_ollama import create_chat_completion
+    from llm_api_ollama import get_analysis_model
+    from llm_api_ollama import get_chat_model
 elif api_choice == "open_router":
-    from llm_api_open_router import manage_dialog as _openrouter_manage_dialog
-    from llm_api_open_router import chat_with_character as _openrouter_chat
+    from llm_api_open_router import create_chat_completion
+    from llm_api_open_router import get_analysis_model
+    from llm_api_open_router import get_chat_model
 else: 
-    from llm_api_groq import manage_dialog as _groq_manage_dialog
-    from llm_api_groq import chat_with_character as _groq_chat
+    from llm_api_groq import create_chat_completion
+    from llm_api_groq import get_analysis_model
+    from llm_api_groq import get_chat_model
 
 
-def manage_dialog(character_name: str, character_strategy: str, interest_level: int, meeting_planned: bool, user_blocked: bool, chat_history: List[Dict[str, str]], user_profile: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def manage_dialog(character_name: str, character_strategy: str, old_interest_level: int, old_meeting_planned: bool, old_user_blocked: bool, chat_history: List[Dict[str, str]], user_profile: Dict[str, Any] | None = None) -> Dict[str, Any]:
     """Dispatch manage_dialog to the selected backend."""
 
     #TODO drag all the management stuff here
     # only outsoure model call to individual APIs 
 
-    #TODO declutter this
-    previous_state = {"interest_level": interest_level, "meeting_planned": meeting_planned, "user_blocked": user_blocked}
-    #TODO and declutter return below, too
+    # skip analysis if nothing to analyse
+    if not chat_history or len(chat_history) < 2:
+        return {
+            "meeting_planned": old_meeting_planned,
+            "interest_level": old_interest_level,
+            "user_blocked": old_user_blocked,
+            "reason": "Noch keine Nachricht.",
+            "char_instructions": "",
+        }
 
-    if api_choice == "ollama":
-        return _ollama_manage_dialog(character_name, character_strategy, previous_state, chat_history, user_profile)
-    elif api_choice == "open_router":
-        return _openrouter_manage_dialog(character_name, character_strategy, previous_state, chat_history, user_profile)
-    else:
-        return _groq_manage_dialog(character_name, character_strategy, previous_state, chat_history, user_profile)
+    # build dialog management prompt from library
+    prompt = llm_prompt_library.DIALOG_MANAGEMENT_PROMPT.format(
+        character_name=character_name,
+        conversation_summary=format_chat_history_for_analysis(chat_history),
+        character_strategy=character_strategy,
+        user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
+            nickname=(user_profile or {}).get("nickname", ""),
+            age=(user_profile or {}).get("age", ""),
+            gender=(user_profile or {}).get("gender", ""),
+            interests=", ".join((user_profile or {}).get("interests", [])),
+            looking_for=", ".join((user_profile or {}).get("looking_for", [])),
+            bio=(user_profile or {}).get("bio", ""),
+        ),
+        interest_level=old_interest_level,
+        meeting_planned=old_meeting_planned,
+        user_blocked=old_user_blocked,
+    )
+
+    # call imported chat completion
+    try: 
+        response_text = create_chat_completion(model=get_analysis_model(), messages=[{"role": "user", "content": prompt}], mode="analysis")
+    except Exception as error:
+        #TODO add error logging to error gist
+        print("Error during analysis response:", error, "\nresponse_text was:", response_text)
+    print("Analysis response:", response_text)
+    print()
+
+    # analyse JSON output if well-formatted
+    try:
+        match = re.search(r"\{.*\}", response_text, re.S)
+        if match: # output seems to be a JSON
+            parsed = json.loads(match.group(0))
+            new_interest_level = min(100, max(0, int(parsed.get("interest_level", old_interest_level))))
+            delta = new_interest_level - old_interest_level
+            if abs(delta) > 15:
+                new_interest_level = old_interest_level + max(-15, min(15, delta))
+            return {
+                "meeting_planned": bool(parsed.get("meeting_planned", False)),
+                "interest_level": new_interest_level,
+                "user_blocked": bool(parsed.get("user_blocked", False)),
+                "reason": str(parsed.get("reason", ""))[:160],
+                "char_instructions": str(parsed.get("char_instructions", "")),
+            }
+        else: # no JSON, but still an answer
+            return {
+                "meeting_planned": old_meeting_planned,
+                "interest_level": old_interest_level,
+                "user_blocked": old_user_blocked,
+                "reason": "Kein JSON, nur: " + response_text,
+                "char_instructions": "",
+            }
+    except Exception as error:
+        #TODO add error logging to error gist
+        print("Error during analysis response:", error, "\nresponse_text was:", response_text)
+        return {
+            "meeting_planned": old_meeting_planned,
+            "interest_level": old_interest_level,
+            "user_blocked": old_user_blocked,
+            "reason": f"Fehler: {str(error)[:140]}",
+            "char_instructions": "",
+        }
 
 
-def chat_with_character(character_description: str, current_time: str, username: str, chat_history: List[Dict[str, str]], interest_level: int, meeting_planned: bool, user_blocked: bool, next_turn_instructions: str, user_message: str, user_profile: Dict[str, Any] | None = None) -> str:
+def chat_with_character(character_description: str, current_time: str, chat_history: List[Dict[str, str]], interest_level: int, meeting_planned: bool, user_blocked: bool, next_turn_instructions: str, user_profile: Dict[str, Any] | None = None) -> str:
     """Dispatch chat_with_character to the selected backend."""
 
-    #TODO declutter this
-    management_result = {"interest_level": interest_level, "meeting_planned": meeting_planned, "user_blocked": user_blocked, "char_instructions": next_turn_instructions}
-    #TODO and declutter return below, too   
+    char_system_prompt = llm_prompt_library.CHARACTER_REPLY_PROMPT.format(
+        current_time=current_time,
+        character_description=character_description,
+        user_profile=llm_prompt_library.USER_PROFILE_CONTEXT.format(
+            nickname=(user_profile or {}).get("nickname", ""),
+            age=(user_profile or {}).get("age", ""),
+            gender=(user_profile or {}).get("gender", ""),
+            interests=", ".join((user_profile or {}).get("interests", [])),
+            looking_for=", ".join((user_profile or {}).get("looking_for", [])),
+            bio=(user_profile or {}).get("bio", ""),
+        ),
+    )
+    messages = [{"role": "system", "content": char_system_prompt}]
+    messages.extend(chat_history)
+    messages.append({
+        "role": "system",
+        "content": "system_prompt-Ergänzung. In deinem nächsten Turn: " + next_turn_instructions,
+    })
 
-    if api_choice == "ollama":
-        return _ollama_chat(character_description, current_time, username, chat_history, management_result, user_message, user_profile)
-    elif api_choice == "open_router":
-        return _openrouter_chat(character_description, current_time, username, chat_history, management_result, user_message, user_profile)
-    else:
-        return _groq_chat(character_description, current_time, username, chat_history, management_result, user_message, user_profile)
+    # call imported chat completion
+    try: 
+        response_text = create_chat_completion(model=get_chat_model(), messages=messages, mode="chat")
+    except Exception as error:
+        #TODO add error logging to error gist
+        print("Error during chat response:", error, "\nresponse_text was:", response_text)
+    print("Chat response:", response_text)
+    print()
+
+    # run refusal check
+    try: 
+        if api_choice != "ollama": # choose local models without guardrails
+            refusal_check = create_chat_completion(
+                get_analysis_model(),
+                [{"role": "user", "content": llm_prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn=response_text)}],
+                50,
+                temperature=0.7,
+            ).lower()
+            print("refusal check response:", refusal_check)
+            print()
+            if refusal_check.startswith("contentrefusal") or refusal_check.endswith("contentrefusal"):
+                return "(Dieser Inhalt wurde gemäß den AGB von Fangtastic automatisch zensiert.)"
+    except Exception as error:
+        #TODO log error to error gist 
+        print("Error during refusal check:", str(error))
+        print()
+
+    return response_text
+
+
+def format_chat_history_for_analysis(chat_history: List[Dict[str, str]], message_cap: int = 7) -> str:
+    """Format chat history as readable text"""
+    formatted = []
+    for msg in chat_history[-message_cap:]:
+        role = "Spieler" if msg.get("role") == "user" else "Charakter"
+        content = msg.get("content", "")
+        formatted.append(f"{role}: {content}")
+    return "\n".join(formatted)
+
