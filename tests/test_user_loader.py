@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from user_loader import load_all_users, users_by_username
+from data_loader_users import load_all_users, users_by_username
 
 
 class UserLoaderTests(unittest.TestCase):

@@ -7,21 +7,21 @@ or a local Ollama-based implementation, depending on the options in
 """
 
 from typing import Any, Dict, List
-from fangtastic_options import OPTIONS
+from app_options import OPTIONS
 
 api_choice = str(OPTIONS.get("api_choice", "groq")).lower()
 print("api_choice:", api_choice)
 
 # Import backends lazily to avoid importing heavy deps when not needed
 if api_choice == "ollama":
-    from ollama_api import manage_dialog as _ollama_manage_dialog
-    from ollama_api import chat_with_character as _ollama_chat
+    from llm_api_ollama import manage_dialog as _ollama_manage_dialog
+    from llm_api_ollama import chat_with_character as _ollama_chat
 elif api_choice == "open_router":
-    from open_router_api import manage_dialog as _openrouter_manage_dialog
-    from open_router_api import chat_with_character as _openrouter_chat
+    from llm_api_open_router import manage_dialog as _openrouter_manage_dialog
+    from llm_api_open_router import chat_with_character as _openrouter_chat
 else: 
-    from groq_api import manage_dialog as _groq_manage_dialog
-    from groq_api import chat_with_character as _groq_chat
+    from llm_api_groq import manage_dialog as _groq_manage_dialog
+    from llm_api_groq import chat_with_character as _groq_chat
 
 
 def manage_dialog(character_name: str, character_strategy: str, previous_state: Dict[str, Any], chat_history: List[Dict[str, str]], user_profile: Dict[str, Any] | None = None) -> Dict[str, Any]:

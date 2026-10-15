@@ -7,11 +7,11 @@ from pathlib import Path
 
 import streamlit as st
 
-from fangtastic_options import OPTIONS
-from character_loader import load_all_characters, resolve_profile_image_path
+from app_options import OPTIONS
+from data_loader_characters import load_all_characters, resolve_profile_image_path
 from llm_api import chat_with_character, manage_dialog
-from gist_logger import log_chat_to_gist
-from user_loader import load_all_users, users_by_username
+from data_storer_gist_logger import log_chat_to_gist
+from data_loader_users import load_all_users, users_by_username
 
 # Configure page
 st.set_page_config(

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import open_router_api
+import llm_api_open_router
 
 
 class FakeResponse:
@@ -25,10 +25,10 @@ class OpenRouterApiTests(unittest.TestCase):
             '{"interest_level": 100, "meeting_planned": true, "reason": "Gutes Gespräch"}'
         )
         with (
-            patch.object(open_router_api, "_get_api_key", return_value="test-key"),
-            patch.object(open_router_api.requests, "post", return_value=response) as post,
+            patch.object(llm_api_open_router, "_get_api_key", return_value="test-key"),
+            patch.object(llm_api_open_router.requests, "post", return_value=response) as post,
         ):
-            state = open_router_api.manage_dialog(
+            state = llm_api_open_router.manage_dialog(
                 "Michi",
                 "Vorsichtig und höflich.",
                 {"interest_level": 50, "meeting_planned": False},
@@ -40,17 +40,17 @@ class OpenRouterApiTests(unittest.TestCase):
 
         self.assertEqual(state["interest_level"], 65)
         self.assertTrue(state["meeting_planned"])
-        self.assertEqual(post.call_args.args[0], open_router_api.OPENROUTER_CHAT_COMPLETIONS_URL)
+        self.assertEqual(post.call_args.args[0], llm_api_open_router.OPENROUTER_CHAT_COMPLETIONS_URL)
         self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer test-key")
         self.assertEqual(post.call_args.kwargs["json"]["model"], "openai/gpt-4o-mini")
 
     def test_chat_with_character_returns_answer_after_refusal_check(self):
         responses = [FakeResponse("Hallo, schön dich zu sehen."), FakeResponse("No refusal detected")]
         with (
-            patch.object(open_router_api, "_get_api_key", return_value="test-key"),
-            patch.object(open_router_api.requests, "post", side_effect=responses) as post,
+            patch.object(llm_api_open_router, "_get_api_key", return_value="test-key"),
+            patch.object(llm_api_open_router.requests, "post", side_effect=responses) as post,
         ):
-            answer = open_router_api.chat_with_character(
+            answer = llm_api_open_router.chat_with_character(
                 "Ein geheimnisvoller Vampir.",
                 "Freitagabend",
                 "Alex",
