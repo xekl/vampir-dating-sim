@@ -17,10 +17,17 @@ OPENROUTER_CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions
 # OpenRouter model names, selected from https://openrouter.ai/models
 # "openrouter_chat_model": "openai/gpt-4o-mini",
 # "openrouter_analysis_model": "openai/gpt-4o-mini",
+# nvidia/nemotron-3-ultra-550b-a55b:free
+# nvidia/nemotron-3.5-lightning:free
+# nvidia/nemotron-3-super-120b-a12b:free
+# thinkingmachines/inkling:free
+# apodex/apodex-1.1-mini:free
+# cohere/north-mini-code:free
 
 # TODO experiment with models, smarter handling
-open_router_analysis_model = "qwen/qwen3.8-27b:free"
-open_router_chat_model = "qwen/qwen3.8-27b:free"
+open_router_analysis_model = "nvidia/nemotron-3-ultra-550b-a55b:free"
+open_router_chat_model = "nvidia/nemotron-3-ultra-550b-a55b:free"
+
 
 def _get_api_key() -> str:
     api_key = st.secrets.get("OPEN_ROUTER_API_KEY", os.getenv("OPEN_ROUTER_API_KEY", ""))
@@ -49,6 +56,9 @@ def _create_completion(model: str, messages: List[Dict[str, str]], max_tokens: i
         timeout=120,
     )
     response.raise_for_status()
+
+    # print("  _create_completion response", response.json())
+
     return response.json()["choices"][0]["message"].get("content", "") or ""
 
 
@@ -106,8 +116,12 @@ def manage_dialog(
     )
 
     try:
+
+        print("Managing dialog with openrouter model:", open_router_analysis_model)
+        print()
         
         response_text = _create_completion(open_router_analysis_model, [{"role": "user", "content": prompt}], 180)
+
         print("Analysis response:", response_text)
         print()
 
@@ -176,20 +190,29 @@ def chat_with_character(
 
     try:
 
+        print("entering chat_with_character with openrouter model:", open_router_chat_model)
+        print()
+
         answer = _create_completion(open_router_chat_model, messages, 250, temperature=0.8)
+
         print("chat response:", answer)
         print()
 
-        refusal_check = _create_completion(
-            open_router_analysis_model,
-            [{"role": "user", "content": prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn=answer)}],
-            50,
-            temperature=1,
-        ).lower()
-        print("refusal check response:", refusal_check)
-        print()
-        if refusal_check.startswith("contentrefusal") or refusal_check.endswith("contentrefusal"):
-            return "(Dieser Inhalt wurde gemäß den AGB von Fangtastic automatisch zensiert.)"
+        try: 
+            refusal_check = _create_completion(
+                open_router_analysis_model,
+                [{"role": "user", "content": prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn=answer)}],
+                50,
+                temperature=1,
+            ).lower()
+            print("refusal check response:", refusal_check)
+            print()
+            if refusal_check.startswith("contentrefusal") or refusal_check.endswith("contentrefusal"):
+                return "(Dieser Inhalt wurde gemäß den AGB von Fangtastic automatisch zensiert.)"
+
+        except Exception as error:
+            print("Error during refusal check:", str(error))
+            print()
 
         return answer
     
