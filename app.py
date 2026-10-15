@@ -11,7 +11,7 @@ from app_options import OPTIONS
 from data_loader_characters import load_all_characters, resolve_profile_image_path
 from llm_api import chat_with_character, manage_dialog
 from data_storer_gist_logger import log_chat_to_gist
-from data_loader_users import load_all_users, users_by_username
+from data_loader_users import load_all_users, get_user_by_username
 
 # Configure page
 st.set_page_config(
@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for dark vampire theme
+# Custom CSS for dark romantic theme
 st.markdown("""
 <style>
     * {
@@ -181,7 +181,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Load user and character data from the filesystem.
-USER_OPTIONS = users_by_username(load_all_users())
+USER_OPTIONS = get_user_by_username(load_all_users())
 
 # Initialize session state
 if "logged_in" not in st.session_state:
@@ -189,20 +189,13 @@ if "logged_in" not in st.session_state:
     st.session_state.username = None
     st.session_state.current_page = "login"
     st.session_state.current_character = None
-    st.session_state.characters = {}
-    st.session_state.character_chats = {}
-    st.session_state.character_wins = {}
-    st.session_state.character_loses = {}
-    st.session_state.character_interests = {}
-    st.session_state.character_looking_for = {}
 
 if "all_characters" not in st.session_state:
     st.session_state.all_characters = load_all_characters()
 
-
 def get_current_user_profile() -> dict:
     """Return the logged-in user's profile loaded from its user JSON."""
-    # TODO make sure this also reflects and stores manual changes made on the profile page
+    #TODO make sure this also reflects and stores manual changes made on the profile page
     username = st.session_state.get("username") or ""
     user = USER_OPTIONS.get(username, {})
     return user.setdefault("profile", {
@@ -214,29 +207,18 @@ def get_current_user_profile() -> dict:
         "bio": "",
     })
 
-
 def configure_user_characters(username: str) -> None:
     """Initialize only the characters associated with the logged-in user."""
     user = USER_OPTIONS.get(username, {})
     character_ids = set(user.get("character_ids", []))
+    #TODO all character-related states should go into here
     st.session_state.characters = {}
-    st.session_state.character_chats = {}
-    st.session_state.character_wins = {}
-    st.session_state.character_loses = {}
-    st.session_state.character_interests = {}
-    st.session_state.character_looking_for = {}
-    st.session_state.profile_index = 0
+    st.session_state.profile_index = 0 # start with 0th character in char view
 
+    # collect all characters for this user
     for char in st.session_state.all_characters:
-        if char.get("id") not in character_ids:
-            continue
-        char["interest_analysis"] = {"meeting_planned": False, "interest_level": 0, "reason": ""}
-        st.session_state.characters[char["id"]] = char
-        st.session_state.character_chats[char["id"]] = []
-        st.session_state.character_wins[char["id"]] = False
-        st.session_state.character_loses[char["id"]] = False
-        st.session_state.character_interests[char["id"]] = 0
-        st.session_state.character_looking_for[char["id"]] = 0
+        if char.get("id") in character_ids:
+            st.session_state.characters[char["id"]] = char
 
 
 def get_image_data_url(image_path: str | None) -> str | None:
@@ -354,14 +336,14 @@ def profiles_page():
             st.error("Keine Wesen gefunden")
             return
 
+        #TODO check if should be character here already not current_char
         current_char = characters_list[st.session_state.profile_index]
-        won = st.session_state.character_wins.get(current_char["id"], False)
-        lost = st.session_state.character_loses.get(current_char["id"], False)
+        won = current_char.get("meeting_planned")
+        lost = current_char.get("user_blocked")
         st.markdown(
             render_character_card_html(current_char, won, lost),
             unsafe_allow_html=True,
         )
-
 
         # Profile navigation buttons
         col1, col2, col3 = st.columns(3)
@@ -436,19 +418,21 @@ def chat_page():
     with col1:
         if st.button("⬅️ Zurück", use_container_width=True):
             # Log the chat before leaving
-            chat_id = character["id"]
-            chat_history = st.session_state.character_chats.get(chat_id, [])
-            interest = st.session_state.character_interests.get(chat_id, 0)
-            won = st.session_state.character_wins.get(chat_id, False)
-            
+            chat_history = character.get("messages", [])
+            interest = character.get("interest_level", -1)
+            won = character.get("meeting_planned", False)
+            lost = character.get("blocked_user", False)
+
             if chat_history:
+                #TODO maybe log with every message instead
                 log_chat_to_gist(
                     character["name"],
-                    chat_id,
+                    character["id"],
                     st.session_state.username,
                     chat_history,
                     interest,
                     won,
+                    lost,
                     "Chat beendet, zurück zum Profil"
                 )
             
@@ -458,19 +442,15 @@ def chat_page():
     # debug info (visible only in debug mode)
     with debug_col:
         if OPTIONS.get("debug"):
-            char_id = character["id"]
-            management_result = st.session_state.characters.get(char_id, {}).get("management_result", {})
-            interest = management_result.get("interest_level", 0)
-            interest = st.session_state.characters[character["id"]]["interest_analysis"]
-            st.markdown(f"interest lvl: {interest}")
+            st.markdown(f"interest lvl: {character.get("interest_level")}")
 
     # state info 
     with col3:
-        won = st.session_state.character_wins.get(character["id"], False)    
-        blocked = st.session_state.character_loses.get(character["id"], False)    
+        won = character.get("meeting_planned", False)    
+        lost = character.get("blocked_user", False)    
         if won:
             st.button("✓ TREFFEN GEPLANT!", disabled=True, use_container_width=True)
-        if blocked:
+        if lost:
             st.button("🚫 Geblockt", disabled=True, use_container_width=True)
     
     st.markdown("---")
@@ -487,10 +467,10 @@ def chat_page():
     st.markdown("---")
     
     # Chat history
-    chat_history = st.session_state.character_chats.get(character["id"], [])
+    chat_history = character.get("messages", [])
     
     if not chat_history:
-        st.markdown('<div style="text-align: center; color: #666;">Starte ein Gespräch...</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align: center; color: #666;">Beginne ein Gespräch...</div>', unsafe_allow_html=True)
     else:
         for msg in chat_history:
             if msg["role"] == "user":
@@ -509,12 +489,9 @@ def chat_page():
     # st.markdown("---")
     
     # Input area
-    if blocked: 
-        user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}", disabled=blocked)
-    else: 
-        user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}")
+    user_input = st.chat_input("Deine Nachricht:", key=f"chat_{character['id']}", disabled=lost)
 
-    if user_input and not blocked:
+    if user_input and not lost:
 
         print("sent input:" + user_input)
         print()
@@ -527,24 +504,26 @@ def chat_page():
         ''', unsafe_allow_html=True)
 
         # Add user message
-        st.session_state.character_chats[character["id"]].append({
+        character.get("messages", []).append({
             "role": "user",
             "content": user_input
         })
-        
-        # Character system prompt
-        character_description = character.get("character_description", "")
-        character_strategy = character.get("character_strategy", "")
 
         # Manage dialog
         management_result = manage_dialog(
-            character["name"],
-            character_strategy,
-            st.session_state.characters[character["id"]]["interest_analysis"],
-            st.session_state.character_chats[character["id"]],
+            character.get("name", ""),
+            character.get("character_strategy", ""),
+            character.get("interest_level", 0),
+            character.get("meeting_planned", False),
+            character.get("user_blocked", False),
+            character.get("messages", []),
             get_current_user_profile(),
         )
-        st.session_state.characters[character["id"]]["management_result"] = management_result
+        character["interest_level"] = management_result.get("interest_level")
+        character["user_blocked"] = management_result.get("user_blocked")
+        character["meeting_planned"] = management_result.get("meeting_planned")
+        next_turn_instructions = management_result.get("char_instructions")
+        #TODO log current character state to character gist?
 
         # Get character response with a delay that depends on debug mode.
         # In debug mode delays are very short; otherwise use realistic pauses.
@@ -557,30 +536,27 @@ def chat_page():
         with st.spinner("tippt ..."):
             time.sleep(random.uniform(*delay_cfg["typing"]))
             response = chat_with_character(
-                character_description,
+                character.get("character_description", ""),
                 current_time=current_time,
                 username=st.session_state.username,
-                chat_history=st.session_state.character_chats[character["id"]][:-1],  # Exclude latest user message for context
-                management_result=st.session_state.characters[character["id"]]["management_result"],
-                user_message=user_input,
-                user_profile=get_current_user_profile(),
+                chat_history=character.get("messages")[:-1],  # Exclude latest user message for context #TODO revise this, maybe keep message instead
+                interest_level=character.get("interest_level"),
+                user_blocked=character.get("user_blocked"),
+                meeting_planned=character.get("meeting_planned"),
+                next_turn_instructions=next_turn_instructions,
+                user_message=user_input, #TODO because why is it added here again duh
+                user_profile=get_current_user_profile(), #TODO this contains the name from above
             )
         
         # Add character response
-        st.session_state.character_chats[character["id"]].append({
+        character["messages"].append({
             "role": "assistant",
             "content": response
         })
 
-        # Set win or lose condition
-        st.session_state.character_wins[character["id"]] = bool( 
-            management_result.get("meeting_planned", False)
-        )
-        st.session_state.character_loses[character["id"]] = bool(
-            management_result.get("user_blocked", False)
-        )
-        if st.session_state.character_loses[character["id"]]:
-            st.session_state.character_chats[character["id"]].append({
+        # Send lose message if blocked
+        if character.get("user_blocked"):
+            character["messages"].append({
                 "role": "assistant",
                 "content": f"{character['name']} hat dich blockiert."
             })

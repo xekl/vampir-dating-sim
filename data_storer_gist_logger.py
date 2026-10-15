@@ -19,6 +19,7 @@ def log_chat_to_gist(
     chat_history: List[Dict[str, str]],
     interest_level: int,
     won: bool,
+    lost: bool,
     reason: str = ""
 ) -> bool:
     """
@@ -50,7 +51,7 @@ def log_chat_to_gist(
         
         # Format the log entry
         timestamp = datetime.now().isoformat()
-        status = "WON ✓" if won else "INCOMPLETE"
+        status = "meeting arranged ✓" if won else "user blocked" if lost else "INCOMPLETE"
         
         log_entry = f"""
 ### [{timestamp}] {character_name} - {status} (Interest: {interest_level}%)

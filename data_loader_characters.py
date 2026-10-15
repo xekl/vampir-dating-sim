@@ -35,6 +35,7 @@ def load_all_characters() -> List[Dict[str, Any]]:
     characters = []
     
     if not CHARACTERS_DIR.exists():
+        #TODO add error logging in error gist 
         return characters
     
     for json_file in sorted(CHARACTERS_DIR.glob("*.json")):
@@ -46,6 +47,7 @@ def load_all_characters() -> List[Dict[str, Any]]:
                 )
                 characters.append(character)
         except Exception as e:
+            #TODO add error logging in error gist 
             print(f"Error loading character {json_file}: {e}")
     
     return characters

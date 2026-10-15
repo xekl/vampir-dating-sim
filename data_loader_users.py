@@ -8,7 +8,9 @@ USERS_DIR = Path(__file__).parent / "users"
 def load_all_users() -> List[Dict[str, Any]]:
     """Load user login, profile, and character-association data from JSON files."""
     users = []
+
     if not USERS_DIR.exists():
+        #TODO add error logging in error gist 
         return users
 
     for json_file in sorted(USERS_DIR.glob("*.json")):
@@ -18,11 +20,12 @@ def load_all_users() -> List[Dict[str, Any]]:
             if user.get("username"):
                 users.append(user)
         except (OSError, json.JSONDecodeError) as error:
+            #TODO add error logging in error gist 
             print(f"Error loading user {json_file}: {error}")
 
     return users
 
 
-def users_by_username(users: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def get_user_by_username(users: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     """Index loaded users for login and session-state lookups."""
     return {user["username"]: user for user in users if user.get("username")}
