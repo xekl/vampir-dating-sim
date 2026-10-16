@@ -15,8 +15,8 @@ OPTIONS = {
     # "current_time_override": "Samstag, 15. August, 23:00",
 
     # API choice: "groq", "open_router" (remote APIs), or "ollama" (local models)
-    # "api_choice": "groq",
-    "api_choice": "open_router",
+    "api_choice": "groq",
+    # "api_choice": "open_router",
     # "api_choice": "ollama",
 
     # Response timing: realistic (for production) vs short (for debug)
