@@ -23,7 +23,8 @@ def store_character_state(username: str, character_state: Dict) -> None:
     # store in gist 
     #TODO make storing in files possible?
     response = log_to_gist(target_file, json_to_store, mode="replace")
-    print("store_character_state response:", response.status_code, response.text)
+    # print("store_character_state response:", response.status_code, response.text)
+    print("store_character_state response:", response.status_code)
     
 
 def store_user_profile(username: str, profile_data: Dict) -> None:
@@ -36,5 +37,6 @@ def store_user_profile(username: str, profile_data: Dict) -> None:
     # store in gist 
     #TODO make storing in files possible?
     response = log_to_gist(target_file, json_to_store, mode="replace")
-    print("store_user_profile response:", response.status_code, response.text)
+    # print("store_user_profile response:", response.status_code, response.text)
+    print("store_user_profile response:", response.status_code)
 

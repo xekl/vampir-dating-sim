@@ -31,10 +31,8 @@ def log_to_gist(target_file: str, log_entry: str, mode: str = "append") -> reque
         return response
         
     gist_data = response.json()
-
-    print("gist_data:", gist_data)
-
     files = gist_data.get("files", {})
+    # print("gist_data:", gist_data)
 
     update_data = {}
     if mode == "append": # log mode append (default)
@@ -76,12 +74,13 @@ def log_error(username: str, position: str, error_message: str) -> None:
     log_line = "## " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - ERROR - " + username + " - " + position + " -------\n"
     log_line += "\n  "+ error_message + "\n\n"
     response = log_to_gist(ERROR_TARGET_FILE, log_line, mode="append")
-    print("log_error response:", response.status_code, response.text)
+    # print("log_error response:", response.status_code, response.text)
+    print("log_error response:", response.status_code)
 
 
 def log_other_stuff(username: str, position: str, log_message: str) -> None:
     log_line = "## " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - LOG - " + username + " - " + position + " -------\n"
     log_line += "\n  "+ log_message + "\n\n"
     response = log_to_gist(LOG_TARGET_FILE, log_line, mode="append")
-    print("log_other_stuff response:", response.status_code, response.text)
-
+    # print("log_other_stuff response:", response.status_code, response.text)
+    print("log_other_stuff response:", response.status_code)

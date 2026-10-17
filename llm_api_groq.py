@@ -103,7 +103,7 @@ def create_chat_completion(model: str, messages: List[Dict[str, str]], max_token
                 model=model,
                 messages=messages,
                 # temperature=0.2,
-                max_tokens=180,
+                max_tokens=max_tokens,
             )
 
     except Exception as error:
