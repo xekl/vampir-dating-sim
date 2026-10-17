@@ -1,9 +1,14 @@
 import json
+import streamlit as st
 from pathlib import Path
 from typing import Any, Dict, List
+import requests
 
 USERS_DIR = Path(__file__).parent / "users"
 CHARACTERS_DIR = Path(__file__).parent / "characters"
+
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
+GIST_ID = st.secrets.get("GIST_ID", "")
 
 
 def load_all_users() -> List[Dict[str, Any]]:
@@ -77,3 +82,37 @@ def load_all_characters() -> List[Dict[str, Any]]:
             print(f"Error loading character {json_file}: {e}")
     
     return characters
+
+
+def update_character_state_from_gist(username: str, character: Dict[str, Any]) -> Dict[str, Any]:
+    """Update a character's state in the user's profile based on data from the gist."""
+
+    # build filename from user/character combination
+    target_file = "fangtastic_" + username + "_" + character.get("id")
+
+    # retrieve existing gist content
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    gist_url = f"https://api.github.com/gists/{GIST_ID}"
+
+    # retrieve existing gist content
+    try: 
+        response = requests.get(gist_url, headers=headers)
+    except Exception as error:
+        print(f"Failed to fetch gist. Response status: {response.status_code}, error: {error}")
+        return response
+        
+    gist_data = response.json()
+    files = gist_data.get("files", {})
+
+    # if this character has progress stored online, update it 
+    if target_file in files: 
+        # load character progress
+        online_character = json.loads(files.get(target_file, {}).get("content", ""))        
+        # update local character data
+        for key in online_character: 
+            character[key] = online_character[key]
+        return character
+
+    # else return the original character
+    else: 
+        return character

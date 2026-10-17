@@ -8,7 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from app_options import OPTIONS
-from data_loader import load_all_characters, resolve_profile_image_path, load_all_users, get_user_by_username
+from data_loader import load_all_characters, resolve_profile_image_path, load_all_users, get_user_by_username, update_character_state_from_gist
 from data_storer import store_character_state, store_user_profile
 from llm_api import chat_with_character, manage_dialog
 from data_logger import log_to_gist
@@ -213,13 +213,15 @@ def configure_user_characters(username: str) -> None:
     """Initialize only the characters associated with the logged-in user."""
     user = USER_OPTIONS.get(username, {})
     character_ids = set(user.get("character_ids", []))
-    #TODO all character-related states should go into here
     st.session_state.characters = {}
     st.session_state.profile_index = 0 # start with 0th character in char view
 
     # collect all characters for this user
     for char in st.session_state.all_characters:
         if char.get("id") in character_ids:
+            # update from gist if there is character progress to load 
+            char = update_character_state_from_gist(username, char)
+            # store char in session_state
             st.session_state.characters[char["id"]] = char
 
 
@@ -398,6 +400,7 @@ def user_profile_page():
             })
             store_user_profile(st.session_state.username, profile)
             # TODO update session_state to use in the prompts for the characters
+
 
 def chat_page():
     """Render chat interface"""
