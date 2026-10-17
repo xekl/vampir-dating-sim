@@ -73,7 +73,7 @@ def manage_dialog(character_name: str, character_strategy: str, old_interest_lev
 
     if OPTIONS.get("debug"): # if in debug mode, log this (otherwise, this takes too much time)
         log_other_stuff(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.manage_dialog()", log_message=f"Analysis response: {response_text}")
-    print("LOG - llm_api.manage_dialog() - Analysis response: {response_text}\n\n")
+    print(f"LOG - llm_api.manage_dialog() - Analysis response: {response_text}\n\n")
 
     # analyse JSON output if well-formatted
     try:
@@ -141,7 +141,7 @@ def chat_with_character(character_description: str, current_time: str, chat_hist
         print(f"ERROR - llm_api.chat_with_character() - Error getting chat response: {error}, raw response_text was: {response_text}\n\n")
     if OPTIONS.get("debug"): # if in debug mode, log this (otherwise, this takes too much time)
         log_other_stuff(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.chat_with_character()", log_message=f"Chat response: {response_text}")
-    print("LOG - llm_api.chat_with_character() - Chat response: {response_text}\n\n")
+    print(f"LOG - llm_api.chat_with_character() - Chat response: {response_text}\n\n")
 
     # run refusal check
     try: 
@@ -155,7 +155,7 @@ def chat_with_character(character_description: str, current_time: str, chat_hist
             ).lower()
             if OPTIONS.get("debug"): # if in debug mode, log this (otherwise, this takes too much time)
                 log_other_stuff(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.chat_with_character()", log_message=f"Refusal Check: {refusal_check}")
-            print("LOG - llm_api.chat_with_character() - Refusal Check: {refusal_check}\n\n")
+            print(f"LOG - llm_api.chat_with_character() - Refusal Check: {refusal_check}\n\n")
 
             # if model refused to answer in-character, replace response with "Fangtastic filter"
             if refusal_check.startswith("contentrefusal") or refusal_check.endswith("contentrefusal"):
