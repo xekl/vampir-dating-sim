@@ -20,10 +20,10 @@ Bisherige Konversation (letzte Nachrichten):
 {conversation_summary}
 Aktueller Stand der Variablen: interest_level: {interest_level}, meeting_planned? {meeting_planned}, user_blocked? {user_blocked}
 Deine Aufgabe: Update den Spielzustand basierend auf der Persönlichkeit des Charakters, des Gesprächs und des bisherigen Zustands. Beachte:
-- meeting_planned = true, wenn das Gespräch zeigt, dass BEIDE Partner ein Treffen wollen und planen. Außerdem sollte im Chat über das Bluttrinken gesprochen worden sein, das der Kink des Charakters ist, wenn nicht, spricht der Charakter es jetzt an. 
+- meeting_planned = true, wenn das Gespräch zeigt, dass BEIDE Partner ein Treffen wollen und planen. Außerdem sollte im Chat über den Zweck und Ablauf eines gemeinsamen Treffens gesprochen worden sein (und etwaige Vorlieben, Bedingungen oder Kinks), wenn nicht, spricht der Charakter es jetzt an. 
 - interest_level ist ein Wert von 0-100, der das Interesse des Charakters spiegelt, er steigt, wenn der Charakter das Gegenüber als zu den eigenen Bedürfnisseen passend empfindet, und sinkt, wenn er/sie das Gegenüber als unpassend empfindet. Er kann auch gleich bleiben. 
 - interest_level soll sich pro Runde nur langsam verändern, maximal 20 Punkte.
-- Ab interest_level 30 kann über das Bluttrinken gesprochen werden.
+- Ab interest_level 30 kann über Intimes gesprochen werden.
 - Ab interest_level 70 stimmt der Charakter einem Vorschlag zu einem Treffen zu. Wenn der Charakter selbst einen Vorschlag gemacht hat, stimmt er auch bei geringerem Level zu!
 - Ziel des Charakters ist zu flirten und ein passendes Match zu finden. Wenn das Gegenüber allerdings nicht passt oder das Gespräch nicht gut läuft, ist das Ziel es abzuwimmeln und das Gespräch zu beenden. 
 - Setze user_blocked auf true, wenn der Charakter das Gespräch nicht mehr weiterführen will, etwa weil interest_level unter 0 sinken würde oder weil interest_level unter 10 ist und die letzte Nachricht abweisend, beleidigend oder sehr unpassend war. In diesem Fall ist user_blocked true und der Charakter wird das Gespräch abbrechen.
