@@ -3,6 +3,12 @@ import requests
 from datetime import datetime
 from typing import Dict, List
 
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
+GIST_ID = st.secrets.get("GIST_ID", "")
+
+ERROR_TARGET_FILE = "fangtastic_logs.md"
+LOG_TARGET_FILE = "fangtastic_logs.md"
+
 # GitHub Gist Logging 
 # to setup,
 #  go to https://gist.github.com/
@@ -12,110 +18,64 @@ from typing import Dict, List
 #  click "Generate new token" (only gist scope)
 #  insert all relevant info (token, id, username) into secrets.toml
 
-def log_chat_to_gist(
-    character_name: str,
-    character_id: str,
-    player_name: str,
-    chat_history: List[Dict[str, str]],
-    interest_level: int,
-    won: bool,
-    lost: bool,
-    reason: str = ""
-) -> bool:
-    """
-    Log chat session to a GitHub Gist
-    
-    Args:
-        character_name: Name of the character
-        character_id: ID of the character
-        player_name: Player's username (from login)
-        chat_history: The chat history
-        interest_level: Final interest level (0-100)
-        won: Whether the player won this character
-        reason: Optional reason/summary
-    
-    Returns:
-        True if logging was successful, False otherwise
-    """
-    try:
-        GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-        gist_id = st.secrets.get("gist_id", "")
-        
-        if not GITHUB_TOKEN or GITHUB_TOKEN.startswith("ghp_dummy"):
-            print("GitHub Gist token not configured")
-            return False
-        
-        if not gist_id or gist_id == "your_gist_id_here":
-            print("GitHub Gist ID not configured")
-            return False
-        
-        # Format the log entry
-        timestamp = datetime.now().isoformat()
-        status = "meeting arranged ✓" if won else "user blocked" if lost else "INCOMPLETE"
-        
-        log_entry = f"""
-### [{timestamp}] {character_name} - {status} (Interest: {interest_level}%)
 
-**Spieler:** {player_name}
-**Charakter:** {character_name} ({character_id})
-**Status:** {status}
-**Interessenslevel:** {interest_level}%
-{f'**Grund:** {reason}' if reason else ''}
+def log_to_gist(target_file: str, log_entry: str, mode: str = "append") -> requests.Response:
 
-**Konversation:**
-"""
-        
-        # Add conversation
-        for msg in chat_history:
-            role = "👤 Spieler" if msg.get("role") == "user" else "🧛 Charakter"
-            content = msg.get("content", "")
-            log_entry += f"\n{role}: {content}"
-        
-        log_entry += "\n\n---\n\n"
-        
-        # Get current gist content
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        gist_url = f"https://api.github.com/gists/{gist_id}"
-        
-        response = requests.get(gist_url, headers=headers)
-        if response.status_code != 200:
-            print(f"Failed to fetch gist: {response.status_code}")
-            return False
-        
-        gist_data = response.json()
-        
-        # Get the main file name
-        files = gist_data.get("files", {})
-        main_file = None
-        for filename in files:
-            main_file = filename
-            break
-        
-        if not main_file:
-            main_file = "vampire_larp_logs.md"
-        
-        # Append to existing content
-        existing_content = files.get(main_file, {}).get("content", "")
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    gist_url = f"https://api.github.com/gists/{GIST_ID}"
+
+    # retrieve existing gist content
+    response = requests.get(gist_url, headers=headers)
+    if response.status_code != 200:
+        print(f"Failed to fetch gist: {response.status_code}")
+    gist_data = response.json()
+
+    print("gist_data:", gist_data)
+
+    files = gist_data.get("files", {})
+
+    update_data = {}
+    if mode == "append": # log mode append (default)
+
+        # if the target file already exists, retrieve its content
+        existing_content = ""
+        if target_file in files: 
+            existing_content = files.get(target_file, {}).get("content", "")
+
+        # append new content to existing content
         new_content = existing_content + log_entry
-        
-        # Update gist
         update_data = {
-            "files": {
-                main_file: {
-                    "content": new_content
+                "files": {
+                    target_file: {
+                        "content": new_content
+                    }
                 }
             }
-        }
-        
-        response = requests.patch(gist_url, headers=headers, json=update_data)
-        
-        if response.status_code == 200:
-            print(f"Successfully logged to gist: {character_name}")
-            return True
-        else:
-            print(f"Failed to update gist: {response.status_code}")
-            return False
+
+    else: # log mode replace (overwrite with any other string)
+        update_data = {
+                "files": {
+                    target_file: {
+                        "content": log_entry
+                    }
+                }
+            }
     
-    except Exception as e:
-        print(f"Error logging to gist: {str(e)}")
-        return False
+    # update gist
+    response = requests.patch(gist_url, headers=headers, json=update_data)
+    return response
+
+
+def log_error(username: str, position: str, error_message: str) -> None:
+    log_line = "------- " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - ERROR - " + username + " - " + position + " -------"
+    log_line += "\n  "+ error_message + "\n\n"
+    response = log_to_gist(ERROR_TARGET_FILE, log_line, mode="append")
+    print("log_error response:", response.status_code, response.text)
+
+
+def log_other_stuff(username: str, position: str, log_message: str) -> None:
+    log_line = "------- " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - LOG - " + username + " - " + position + " -------"
+    log_line += "\n  "+ log_message + "\n\n"
+    response = log_to_gist(LOG_TARGET_FILE, log_line, mode="append")
+    print("log_other_stuff response:", response.status_code, response.text)
+

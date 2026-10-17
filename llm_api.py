@@ -8,6 +8,7 @@ or a local Ollama-based implementation, depending on the options in
 
 from typing import Any, Dict, List
 from app_options import OPTIONS
+from data_logger import log_error, log_other_stuff
 import llm_prompt_library
 import json 
 import re 
@@ -34,9 +35,6 @@ else:
 
 def manage_dialog(character_name: str, character_strategy: str, old_interest_level: int, old_meeting_planned: bool, old_user_blocked: bool, chat_history: List[Dict[str, str]], user_profile: Dict[str, Any] | None = None) -> Dict[str, Any]:
     """Dispatch manage_dialog to the selected backend."""
-
-    #TODO drag all the management stuff here
-    # only outsoure model call to individual APIs 
 
     # skip analysis if nothing to analyse
     if not chat_history or len(chat_history) < 2:
@@ -70,10 +68,12 @@ def manage_dialog(character_name: str, character_strategy: str, old_interest_lev
     try: 
         response_text = create_chat_completion(model=get_analysis_model(), messages=[{"role": "user", "content": prompt}], mode="analysis")
     except Exception as error:
-        #TODO add error logging to error gist
-        print("Error during analysis response:", error, "\nresponse_text was:", response_text)
-    print("Analysis response:", response_text)
-    print()
+        log_error(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.manage_dialog()", error_message=f"Error during analysis response: {error}, raw response_text was: {response_text}")
+        print(f"ERROR - llm_api.manage_dialog() - Error during analysis response: {error}, raw response_text was: {response_text}\n\n")
+
+    if OPTIONS.get("debug"): # if in debug mode, log this (otherwise, this takes too much time)
+        log_other_stuff(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.manage_dialog()", log_message=f"Analysis response: {response_text}")
+    print("LOG - llm_api.manage_dialog() - Analysis response: {response_text}\n\n")
 
     # analyse JSON output if well-formatted
     try:
@@ -100,8 +100,8 @@ def manage_dialog(character_name: str, character_strategy: str, old_interest_lev
                 "char_instructions": "",
             }
     except Exception as error:
-        #TODO add error logging to error gist
-        print("Error during analysis response:", error, "\nresponse_text was:", response_text)
+        log_error(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.manage_dialog()", error_message=f"Error while analysing JSON output: {error}, raw response_text was: {response_text}")
+        print(f"ERROR - llm_api.manage_dialog() - Error while analysing JSON output: {error}, raw response_text was: {response_text}\n\n")
         return {
             "meeting_planned": old_meeting_planned,
             "interest_level": old_interest_level,
@@ -137,29 +137,36 @@ def chat_with_character(character_description: str, current_time: str, chat_hist
     try: 
         response_text = create_chat_completion(model=get_chat_model(), messages=messages, mode="chat")
     except Exception as error:
-        #TODO add error logging to error gist
-        print("Error during chat response:", error, "\nresponse_text was:", response_text)
-    print("Chat response:", response_text)
-    print()
+        log_error(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.chat_with_character()", error_message=f"Error getting chat response: {error}, raw response_text was: {response_text}")
+        print(f"ERROR - llm_api.chat_with_character() - Error getting chat response: {error}, raw response_text was: {response_text}\n\n")
+    if OPTIONS.get("debug"): # if in debug mode, log this (otherwise, this takes too much time)
+        log_other_stuff(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.chat_with_character()", log_message=f"Chat response: {response_text}")
+    print("LOG - llm_api.chat_with_character() - Chat response: {response_text}\n\n")
 
     # run refusal check
     try: 
-        if api_choice != "ollama": # choose local models without guardrails
+        if api_choice != "ollama": # choose local models without guardrails, so check is not necessary
+
             refusal_check = create_chat_completion(
                 get_analysis_model(),
                 [{"role": "user", "content": llm_prompt_library.REFUSAL_CHECK_PROMPT.format(last_turn=response_text)}],
                 50,
                 temperature=0.7,
             ).lower()
-            print("refusal check response:", refusal_check)
-            print()
-            if refusal_check.startswith("contentrefusal") or refusal_check.endswith("contentrefusal"):
-                return "(Dieser Inhalt wurde gemäß den AGB von Fangtastic automatisch zensiert.)"
-    except Exception as error:
-        #TODO log error to error gist 
-        print("Error during refusal check:", str(error))
-        print()
+            if OPTIONS.get("debug"): # if in debug mode, log this (otherwise, this takes too much time)
+                log_other_stuff(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.chat_with_character()", log_message=f"Refusal Check: {refusal_check}")
+            print("LOG - llm_api.chat_with_character() - Refusal Check: {refusal_check}\n\n")
 
+            # if model refused to answer in-character, replace response with "Fangtastic filter"
+            if refusal_check.startswith("contentrefusal") or refusal_check.endswith("contentrefusal"):
+                log_other_stuff(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.chat_with_character()", log_message=f"Refusal Check was positive for model {get_analysis_model()}: {refusal_check}")
+                print(f"LOG - llm_api.chat_with_character() - Refusal Check was positive for model {get_analysis_model()}: {refusal_check}\n\n")
+                return "(Dieser Inhalt wurde gemäß den AGB von Fangtastic automatisch zensiert.)"
+        
+    except Exception as error:
+        log_error(username=user_profile.get("nickname", "Unknown User") if user_profile else "No User", position="llm_api.chat_with_character()", error_message=f"Error during refusal check: {error}, raw refusal_check was: {refusal_check}")
+        print(f"ERROR - llm_api.chat_with_character() - Error during refusal check: {error}, raw refusal_check was: {refusal_check}\n\n")
+        
     return response_text
 
 

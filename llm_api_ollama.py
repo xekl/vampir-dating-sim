@@ -34,7 +34,7 @@ def create_chat_completion(model: str, messages: List[Dict[str, str]], max_token
 	payload: Dict[str, Any] = {
 		"model": model,
 		"messages": messages,
-		"max_tokens": OPTIONS.get("local_max_tokens", 300),
+		"max_tokens": OPTIONS.get("local_max_tokens", 300), #TODO move config to top of this file
 		"stream": False, 
 		"keep_alive": "10m",
 	}
@@ -44,8 +44,10 @@ def create_chat_completion(model: str, messages: List[Dict[str, str]], max_token
 	if max_tokens is not None:
 		payload["max_tokens"] = max_tokens
 
+	print(f"llm_api_ollama.create_chat_completion() - Calling ollama model with payload:\n  {payload}")
 	response = requests.post(OLLAMA_CHAT_COMPLETIONS_URL, json=payload)
 	response.raise_for_status()
+	print(f"llm_api_ollama.create_chat_completion() - got response: {response}")
 
 	try:
 		response_json = response.json()
@@ -53,8 +55,8 @@ def create_chat_completion(model: str, messages: List[Dict[str, str]], max_token
 
 	except Exception as error:
 		#TODO log error to error gist
-		print("Error parsing Ollama text generation response as JSON:", str(error))
-		print("response_json =", response_json)
+		print(f"Error parsing Ollama text generation response as JSON: {error}")
+		print(f"response_json = {response_json}")
 		return response
 
 	return response_text
