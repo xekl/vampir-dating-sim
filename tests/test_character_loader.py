@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from data_loader_characters import resolve_profile_image_path
+from data_loader import resolve_profile_image_path
 
 
 class CharacterLoaderTests(unittest.TestCase):
