@@ -9,8 +9,9 @@ import streamlit as st
 
 from app_options import OPTIONS
 from data_loader import load_all_characters, resolve_profile_image_path, load_all_users, get_user_by_username
+from data_storer import store_character_state, store_user_profile
 from llm_api import chat_with_character, manage_dialog
-from data_logger import log_chat_to_gist
+from data_logger import log_to_gist
 
 # Configure page
 st.set_page_config(
@@ -192,6 +193,7 @@ if "logged_in" not in st.session_state:
 if "all_characters" not in st.session_state:
     st.session_state.all_characters = load_all_characters()
 
+
 def get_current_user_profile() -> dict:
     """Return the logged-in user's profile loaded from its user JSON."""
     #TODO make sure this also reflects and stores manual changes made on the profile page
@@ -205,6 +207,7 @@ def get_current_user_profile() -> dict:
         "looking_for": [],
         "bio": "",
     })
+
 
 def configure_user_characters(username: str) -> None:
     """Initialize only the characters associated with the logged-in user."""
@@ -393,10 +396,8 @@ def user_profile_page():
                 "looking_for": [item.strip() for item in looking_for.split(",") if item.strip()],
                 "bio": bio.strip(),
             })
-            st.success("Dein Profil wurde gespeichert.")
-            # TODO actually do that and store profile changes to
-            # 1) use in the prompts for the characters, and
-            # 2) allow saving/exporting for future sessions
+            store_user_profile(st.session_state.username, profile)
+            # TODO update session_state to use in the prompts for the characters
 
 def chat_page():
     """Render chat interface"""
@@ -422,18 +423,6 @@ def chat_page():
             won = character.get("meeting_planned", False)
             lost = character.get("user_blocked", False)
 
-            if chat_history:
-                #TODO maybe log with every message instead
-                log_chat_to_gist(
-                    character["name"],
-                    character["id"],
-                    st.session_state.username,
-                    chat_history,
-                    interest,
-                    won,
-                    lost,
-                    "Chat beendet, zurück zum Profil"
-                )
             
             st.session_state.current_page = "profiles"
             st.rerun()
@@ -492,7 +481,7 @@ def chat_page():
 
     if user_input and not lost:
 
-        print("sent input:" + user_input)
+        print("sent input: " + user_input)
         print()
 
         # Write message 
@@ -522,7 +511,6 @@ def chat_page():
         character["user_blocked"] = management_result.get("user_blocked")
         character["meeting_planned"] = management_result.get("meeting_planned")
         next_turn_instructions = management_result.get("char_instructions")
-        #TODO log current character state to character gist?
 
         # Get character response with a delay that depends on debug mode.
         # In debug mode delays are very short; otherwise use realistic pauses.
@@ -557,6 +545,11 @@ def chat_page():
                 "role": "assistant",
                 "content": f"{character['name']} hat dich blockiert."
             })
+
+        # store latest progress
+        store_character_state(username=st.session_state.username, character_state=st.session_state.characters.get(st.session_state.current_character))
+        #TODO make async
+        #TODO test if this shoulld only fire in debug mode after EVERY turn 
 
         # and rerun 
         st.rerun()
