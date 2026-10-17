@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 from datetime import datetime
-from typing import Dict, List
 
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
 GIST_ID = st.secrets.get("GIST_ID", "")
@@ -25,9 +24,12 @@ def log_to_gist(target_file: str, log_entry: str, mode: str = "append") -> reque
     gist_url = f"https://api.github.com/gists/{GIST_ID}"
 
     # retrieve existing gist content
-    response = requests.get(gist_url, headers=headers)
-    if response.status_code != 200:
-        print(f"Failed to fetch gist: {response.status_code}")
+    try: 
+        response = requests.get(gist_url, headers=headers)
+    except Exception as error:
+        print(f"Failed to fetch gist. Response status: {response.status_code}, error: {error}")
+        return response
+        
     gist_data = response.json()
 
     print("gist_data:", gist_data)
@@ -62,7 +64,11 @@ def log_to_gist(target_file: str, log_entry: str, mode: str = "append") -> reque
             }
     
     # update gist
-    response = requests.patch(gist_url, headers=headers, json=update_data)
+    try:
+        response = requests.patch(gist_url, headers=headers, json=update_data)
+    except Exception as error:
+        print("Logging to gist failed:", str(error))
+
     return response
 
 
